@@ -248,7 +248,7 @@ async def get_restaurants(*, pool: asyncpg.Pool | None = None) -> list[StoredRes
 
 
 async def get_visible_restaurants(*, pool: asyncpg.Pool | None = None) -> list[StoredRestaurant]:
-    cutoff = _subtract_months(today_utc(), 3).isoformat()
+    cutoff = _subtract_months(today_utc(), 3)
     rows = await _fetch(
         """
         SELECT *

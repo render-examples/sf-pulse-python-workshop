@@ -41,29 +41,33 @@ async def home(request: Request) -> HTMLResponse:
     initial = await get_initial_data()
     restaurants = initial.restaurants
     events = initial.events
-    context = {
-        "request": request,
-        "title": "SF Pulse",
-        "restaurants": restaurants,
-        "events": events,
-        "last_updated": initial.last_updated,
-        "restaurant_neighborhoods": get_restaurant_neighborhood_options(restaurants),
-        "restaurant_cuisines": get_restaurant_cuisine_options(restaurants),
-        "event_neighborhoods": get_event_neighborhood_options(events),
-        "event_categories": get_event_category_options(events),
-        "initial_data_json": serialize_for_inline_script(initial.model_dump(by_alias=True, mode="json")),
-        "app_url": get_public_app_url(),
-    }
-    return templates.TemplateResponse("index.html", context)
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {
+            "title": "SF Pulse",
+            "restaurants": restaurants,
+            "events": events,
+            "last_updated": initial.last_updated,
+            "restaurant_neighborhoods": get_restaurant_neighborhood_options(restaurants),
+            "restaurant_cuisines": get_restaurant_cuisine_options(restaurants),
+            "event_neighborhoods": get_event_neighborhood_options(events),
+            "event_categories": get_event_category_options(events),
+            "initial_data_json": serialize_for_inline_script(
+                initial.model_dump(by_alias=True, mode="json")
+            ),
+            "app_url": get_public_app_url(),
+        },
+    )
 
 
 @router.get("/map", response_class=HTMLResponse)
 async def map_page(request: Request) -> HTMLResponse:
     initial = await get_initial_data()
     return templates.TemplateResponse(
+        request,
         "map.html",
         {
-            "request": request,
             "title": "SF Pulse — Map",
             "restaurants": initial.restaurants,
             "events": initial.events,
@@ -77,8 +81,9 @@ async def restaurant_detail(id: int, request: Request) -> HTMLResponse:
     if row is None:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     return templates.TemplateResponse(
+        request,
         "restaurant_detail.html",
-        {"request": request, "title": row.name, "restaurant": row},
+        {"title": row.name, "restaurant": row},
     )
 
 
@@ -88,6 +93,7 @@ async def event_detail(id: int, request: Request) -> HTMLResponse:
     if row is None:
         raise HTTPException(status_code=404, detail="Event not found")
     return templates.TemplateResponse(
+        request,
         "event_detail.html",
-        {"request": request, "title": row.title, "event": row},
+        {"title": row.title, "event": row},
     )
