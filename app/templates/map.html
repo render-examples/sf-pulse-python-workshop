@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block head_extra %}
+<link rel="stylesheet" href="/static/styles/map.css" />
+{% endblock %}
+{% block body %}
+<div class="page">
+  <header class="header">
+    <div class="headerInner">
+      <div class="logo">
+        <div class="logoMark">SF</div>
+        <div>
+          <div class="siteTitle">SF Pulse — Map</div>
+          <div class="siteSubtitle">Neighborhood overview</div>
+        </div>
+      </div>
+      <div class="headerActions">
+        <a class="iconBtn" href="/" aria-label="Back to list">←</a>
+      </div>
+    </div>
+  </header>
+  <main class="main">
+    <p class="meta">{{ restaurants|length }} restaurants and {{ events|length }} events plotted by neighborhood.</p>
+    <div id="mapMount"></div>
+  </main>
+</div>
+<script src="/static/map.js" defer></script>
+{% endblock %}

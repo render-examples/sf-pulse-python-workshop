@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block head_extra %}
+<link rel="stylesheet" href="/static/styles/detail.css" />
+{% endblock %}
+{% block body %}
+<div class="page">
+  <header class="header">
+    <div class="headerInner">
+      <div class="logo">
+        <a class="iconBtn" href="/" aria-label="Back">←</a>
+      </div>
+    </div>
+  </header>
+  <main class="main detail">
+    <h1 class="detailTitle">{{ restaurant.name }}</h1>
+    <dl class="detailFacts">
+      <dt>Neighborhood</dt><dd>{{ restaurant.neighborhood }}</dd>
+      <dt>Cuisine</dt><dd>{{ restaurant.cuisine }}</dd>
+      {% if restaurant.address %}<dt>Address</dt><dd>{{ restaurant.address }}</dd>{% endif %}
+      <dt>Opened</dt><dd>{{ restaurant.opened_date }}</dd>
+      {% if restaurant.source_url %}<dt>Source</dt><dd><a href="{{ restaurant.source_url }}" target="_blank" rel="noopener noreferrer">{{ restaurant.source_url }}</a></dd>{% endif %}
+    </dl>
+  </main>
+</div>
+{% endblock %}

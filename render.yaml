@@ -1,0 +1,63 @@
+projects:
+  - name: sf-pulse-python
+    environments:
+      - name: production
+        databases:
+          - name: sf-pulse-python-db
+            databaseName: sfpulse
+            user: sfpulse
+            plan: basic-256mb
+
+        services:
+          - type: keyvalue
+            name: sf-pulse-python-realtime
+            plan: starter
+            maxmemoryPolicy: noeviction
+            ipAllowList: []
+
+          - type: web
+            name: sf-pulse-python
+            runtime: python
+            plan: starter
+            # Build the React diagram (Vite -> static/diagram/), then sync Python deps.
+            buildCommand: |
+              cd web/diagram && npm ci && npm run build && cd ../..
+              pip install --upgrade uv && uv sync --frozen
+            preDeployCommand: uv run python -m bin.migrate
+            startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+            healthCheckPath: /api/healthz
+            envVars:
+              - fromGroup: sf-pulse-python-env
+              - key: DATABASE_URL
+                fromDatabase:
+                  name: sf-pulse-python-db
+                  property: connectionString
+              - key: CRON_SECRET
+                generateValue: true
+              - key: REDIS_URL
+                fromService:
+                  name: sf-pulse-python-realtime
+                  type: keyvalue
+                  property: connectionString
+
+          - type: cron
+            name: sf-pulse-python-daily
+            runtime: python
+            plan: starter
+            # 7:00 AM PDT = 14:00 UTC
+            schedule: "0 14 * * *"
+            buildCommand: pip install --upgrade uv && uv sync --frozen
+            startCommand: uv run python -m bin.trigger_workflow
+            envVars:
+              - key: RENDER_API_KEY
+                sync: false
+              - key: SF_PULSE_WORKFLOW_SLUG
+                sync: false
+
+# Notes:
+# - The workflow worker service (`sf-pulse-python-workflow`) is created manually
+#   in the Render Dashboard. Render Workflows is not yet first-class in render.yaml.
+#   See docs/workflow-setup.md for step-by-step instructions.
+# - Set the env group `sf-pulse-python-env` in the Dashboard with:
+#     LLM_API_KEY (OpenAI or Anthropic), LLM_PROVIDER (optional), LLM_MODEL (optional),
+#     VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT, APP_URL (optional)

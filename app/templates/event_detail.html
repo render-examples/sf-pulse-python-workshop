@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block head_extra %}
+<link rel="stylesheet" href="/static/styles/detail.css" />
+{% endblock %}
+{% block body %}
+<div class="page">
+  <header class="header">
+    <div class="headerInner">
+      <div class="logo">
+        <a class="iconBtn" href="/" aria-label="Back">←</a>
+      </div>
+    </div>
+  </header>
+  <main class="main detail">
+    <h1 class="detailTitle">{{ event.title }}</h1>
+    <dl class="detailFacts">
+      {% if event.location %}<dt>Location</dt><dd>{{ event.location }}</dd>{% endif %}
+      <dt>Date</dt><dd>{{ event.date }}</dd>
+      {% if event.time %}<dt>Time</dt><dd>{{ event.time }}</dd>{% endif %}
+      {% if event.description %}<dt>About</dt><dd>{{ event.description }}</dd>{% endif %}
+      {% if event.source_url %}<dt>Source</dt><dd><a href="{{ event.source_url }}" target="_blank" rel="noopener noreferrer">{{ event.source_url }}</a></dd>{% endif %}
+    </dl>
+  </main>
+</div>
+{% endblock %}
