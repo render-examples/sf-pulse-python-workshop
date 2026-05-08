@@ -1,6 +1,6 @@
 # SF Pulse
 
-SF Pulse tracks new San Francisco restaurant openings and local events.
+SF Pulse tracks new San Francisco restaurant openings.
 This is the **Python port** of [`render-examples/sf-pulse-ts`](https://github.com/render-examples/sf-pulse-ts) — a FastAPI + asyncpg + Render Workflows reference app showcasing the [Render Python SDK](https://github.com/render-oss/sdk/tree/main/python).
 
 The interactive workflow diagram is preserved as a small Vite + React sub-project (`web/diagram/`) and served as a static bundle at `/diagram/`.
@@ -61,7 +61,7 @@ After the first deploy:
 1. `sf-pulse-python` web service: open the URL — home page should render.
 2. `sf-pulse-python-daily`: **Trigger Run** in Dashboard.
 3. `sf-pulse-python-workflow`: logs should show all tasks execute.
-4. Refresh the home page — restaurants and events should appear.
+4. Refresh the home page — restaurants should appear.
 
 ## Stack
 
@@ -84,7 +84,7 @@ app/
   main.py                # FastAPI factory + lifespan
   config.py              # pydantic-settings (env vars)
   db.py                  # asyncpg pool singleton
-  storage.py             # data access (restaurants/events/subs/data_updates)
+  storage.py             # data access (restaurants/subs/data_updates)
   refresh.py             # apply discovered items + push fan-out
   sse.py                 # SSE broadcaster (Redis pub/sub or in-process)
   push.py                # pywebpush + VAPID
@@ -92,7 +92,7 @@ app/
   routes/                # FastAPI routers (api_*, pages.py)
   shared/                # pure utilities (types, dates, identity, filters, ...)
   llm/                   # provider-agnostic LLM extraction
-  sources/               # source scrapers (eater, sfist, michelin, funcheap, famsf, cal_academy, ddg)
+  sources/               # source scrapers (eater, sfist, michelin, ddg)
   templates/             # Jinja2 templates
 workflow/                # Render Workflows worker
   main.py
@@ -146,7 +146,7 @@ Open <http://localhost:8000>.
 uv run python -c "import asyncio; from app.refresh import run_daily_refresh; asyncio.run(run_daily_refresh())"
 ```
 
-Set `LLM_API_KEY` for full coverage; without it only the regex sources (SFist, Michelin, FunCheap, FAMSF, Cal Academy) produce results.
+Set `LLM_API_KEY` for full coverage; without it only the regex sources (SFist, Michelin) produce results.
 
 To exercise the Render Workflows runtime locally instead, run `render workflows dev -- python -m workflow.main` and trigger `daily-refresh` from a second terminal — see [`docs/workflow-setup.md`](docs/workflow-setup.md).
 
@@ -181,14 +181,10 @@ Tests use [testcontainers-python](https://testcontainers-python.readthedocs.io/)
 | GET | `/map` | Neighborhood map view |
 | GET | `/diagram/` | React workflow diagram (static bundle) |
 | GET | `/restaurants/{id}` | Restaurant detail |
-| GET | `/events/{id}` | Event detail |
 | GET | `/api/healthz` | Health check |
 | GET | `/api/restaurants` | List visible restaurants |
 | GET | `/api/restaurants/{id}` | Restaurant by id |
 | DELETE | `/api/restaurants/{id}` | Delete (requires `x-cron-secret`) |
-| GET | `/api/events` | List visible events |
-| GET | `/api/events/{id}` | Event by id |
-| DELETE | `/api/events/{id}` | Delete (requires `x-cron-secret`) |
 | GET | `/api/events-stream` | SSE realtime updates |
 | GET | `/api/updates` | Recent data update log |
 | GET | `/api/updates/last-updated` | Latest update timestamp |

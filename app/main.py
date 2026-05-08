@@ -12,7 +12,6 @@ from fastapi.staticfiles import StaticFiles
 from app.config import get_settings
 from app.db import close_pool
 from app.routes import (
-    api_events,
     api_health,
     api_push,
     api_restaurants,
@@ -47,14 +46,13 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(
         title="SF Pulse",
-        description="SF restaurant openings and local events tracker (Python)",
+        description="SF restaurant openings tracker (Python)",
         lifespan=lifespan,
     )
 
     # API routers
     app.include_router(api_health.router)
     app.include_router(api_restaurants.router)
-    app.include_router(api_events.router)
     app.include_router(api_push.router)
     app.include_router(api_updates.router)
     app.include_router(api_rss.router)

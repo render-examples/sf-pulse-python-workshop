@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 from app.shared.filters import (
-    EventFilters,
     RestaurantFilters,
-    apply_event_filters,
     apply_restaurant_filters,
     parse_home_filters,
 )
-from app.shared.types import Restaurant, SFEvent
+from app.shared.types import Restaurant
 
 
 def _restaurant(**overrides) -> Restaurant:
@@ -31,44 +29,21 @@ def _restaurant(**overrides) -> Restaurant:
     return Restaurant.model_validate(base)
 
 
-def _event(**overrides) -> SFEvent:
-    base = {
-        "id": 1,
-        "title": "Outside Lands",
-        "location": "Golden Gate Park",
-        "date": "August 8, 2026",
-        "start_date": "2026-08-08",
-        "end_date": "2026-08-10",
-        "date_precision": "day_range",
-        "is_upcoming": True,
-        "dedupe_key": "k",
-        "time": None,
-        "description": None,
-        "source_url": None,
-    }
-    base.update(overrides)
-    return SFEvent.model_validate(base)
-
-
 def test_parse_home_filters_extracts_query_params() -> None:
     filters = parse_home_filters(
         {
             "r-q": "pizza",
             "r-neighborhood": "Mission,SoMa",
             "r-upcoming": "1",
-            "e-q": "music",
-            "e-category": "music,art",
-            "e-from": "2026-05-01",
-            "e-to": "2026-08-31",
+            "r-from": "2026-05-01",
+            "r-to": "2026-08-31",
         }
     )
     assert filters.restaurants.query == "pizza"
     assert filters.restaurants.neighborhoods == ["Mission", "SoMa"]
     assert filters.restaurants.upcoming_only is True
-    assert filters.events.query == "music"
-    assert filters.events.categories == ["music", "art"]
-    assert filters.events.from_date == "2026-05-01"
-    assert filters.events.to_date == "2026-08-31"
+    assert filters.restaurants.from_date == "2026-05-01"
+    assert filters.restaurants.to_date == "2026-08-31"
 
 
 def test_parse_home_filters_drops_invalid_iso_date() -> None:
@@ -104,23 +79,3 @@ def test_apply_restaurant_filters_combined() -> None:
         items, RestaurantFilters(neighborhoods=["Mission"], cuisines=["Pizza"])
     )
     assert [r.id for r in out] == [1]
-
-
-def test_apply_event_filters_date_range_overlap() -> None:
-    items = [
-        _event(id=1, start_date="2026-08-01", end_date="2026-08-05"),
-        _event(id=2, start_date="2026-09-01", end_date="2026-09-05"),
-    ]
-    out = apply_event_filters(
-        items, EventFilters(from_date="2026-08-04", to_date="2026-08-10")
-    )
-    assert [e.id for e in out] == [1]
-
-
-def test_apply_event_filters_category_query_combo() -> None:
-    items = [
-        _event(id=1, title="Outside Lands", description="festival"),
-        _event(id=2, title="Volunteer cleanup", description="community service"),
-    ]
-    out = apply_event_filters(items, EventFilters(query="lands"))
-    assert [e.id for e in out] == [1]

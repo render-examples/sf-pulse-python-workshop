@@ -1,7 +1,7 @@
-"""DuckDuckGo HTML search wrappers — port of bin/cron-refresh/restaurants.ts and events.ts.
+"""DuckDuckGo HTML search wrappers — port of bin/cron-refresh/restaurants.ts.
 
-`searchRestaurantsRaw` / `searchEventsRaw` in TS each return a single RawArticle whose
-bodyText is the stripped DDG search result page; the LLM pipeline then mines it.
+`searchRestaurantsRaw` in TS returns a single RawArticle whose bodyText is the
+stripped DDG search result page; the LLM pipeline then mines it.
 This module mirrors that contract.
 """
 
@@ -26,23 +26,6 @@ async def search_restaurants_ddg() -> list[RawArticle]:
             source="ddg",
             url="",
             title=f"DDG: new restaurant openings San Francisco {month_year}",
-            pubDate=None,
-            bodyText=extract_body_text(html) if html else "",
-        )
-    ]
-
-
-async def search_events_ddg() -> list[RawArticle]:
-    """Run the canonical 'San Francisco events Golden Gate Park concerts {Month Year}' query."""
-    month_year = _month_year()
-    html = await ddg_search(
-        f"San Francisco events Golden Gate Park concerts {month_year}"
-    )
-    return [
-        RawArticle(
-            source="ddg",
-            url="",
-            title=f"DDG: San Francisco events {month_year}",
             pubDate=None,
             bodyText=extract_body_text(html) if html else "",
         )

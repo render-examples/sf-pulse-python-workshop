@@ -21,23 +21,14 @@ async def test_apply_discovered_items_adds_new_records(
                 name="Joe's", neighborhood="Mission", cuisine="Pizza", opened_date="April 15, 2026"
             )
         ],
-        events=[
-            storage.NewEvent(
-                title="Outside Lands",
-                location="Golden Gate Park",
-                date="August 8-10, 2026",
-            )
-        ],
         pool=clean_db,
     )
 
     assert result.added_restaurants == ["Joe's"]
-    assert result.added_events == ["Outside Lands"]
     assert result.updated_restaurants == []
-    # Two broadcasts: one for restaurants, one for events.
-    assert broadcast_mock.await_count == 2
+    assert broadcast_mock.await_count == 1
     channels = {call.args[0] for call in broadcast_mock.await_args_list}
-    assert channels == {"restaurants", "events"}
+    assert channels == {"restaurants"}
 
 
 async def test_apply_discovered_items_blocks_named_filter(
@@ -105,15 +96,11 @@ async def test_run_daily_refresh_works_without_workflows_runtime(monkeypatch) ->
         "app.sources.sfist.fetch_sfist_restaurants",
         "app.sources.michelin.fetch_michelin_restaurants",
         "app.sources.ddg_search.search_restaurants_ddg",
-        "app.sources.ddg_search.search_events_ddg",
-        "app.sources.funcheap.fetch_funcheap_events",
-        "app.sources.famsf.fetch_famsf_events",
-        "app.sources.cal_academy.fetch_cal_academy_events",
     ):
         monkeypatch.setattr(path, _empty)
 
     result = await refresh.run_daily_refresh()
-    assert result == {"restaurants": 0, "events": 0}
+    assert result == {"restaurants": 0}
 
 
 async def test_push_skipped_when_vapid_not_configured(

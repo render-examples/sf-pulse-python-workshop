@@ -68,20 +68,6 @@ async def test_delete_restaurant_removes_row(clean_db: asyncpg.Pool) -> None:
     assert await storage.get_restaurant_by_id(r.id, pool=clean_db) is None
 
 
-async def test_add_and_get_event(clean_db: asyncpg.Pool) -> None:
-    e = await storage.add_event(
-        storage.NewEvent(
-            title="Outside Lands",
-            location="Golden Gate Park",
-            date="August 8-10, 2026",
-        ),
-        pool=clean_db,
-    )
-    assert e.start_date == "2026-08-08"
-    assert e.end_date == "2026-08-10"
-    assert e.dedupe_key  # built automatically
-
-
 async def test_subscription_crud(clean_db: asyncpg.Pool) -> None:
     sub = await storage.add_subscription(
         endpoint="https://fcm.googleapis.com/fcm/send/abc",

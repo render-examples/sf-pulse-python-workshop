@@ -61,7 +61,7 @@ Either wait for the daily 7:00 AM PDT cron, or **Trigger Run** the cron service 
 - `https://sf-pulse-python.onrender.com/api/healthz` returns `{"ok": true}`
 - The home page loads and shows the diagram tab
 - Workflow logs show all source tasks completing
-- Restaurants and events appear after the first successful run
+- Restaurants appear after the first successful run
 
 ## Build details
 

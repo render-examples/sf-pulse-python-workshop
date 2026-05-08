@@ -8,7 +8,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 DatePrecision = Literal["day", "day_range", "month", "season", "year", "unknown"]
 HighlightKind = Literal["opening", "michelin"]
-EventCategory = Literal["art", "community", "festival", "film", "market", "music"]
 
 
 class Restaurant(BaseModel):
@@ -28,33 +27,14 @@ class Restaurant(BaseModel):
     source_url: str | None = None
 
 
-class SFEvent(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    id: int
-    title: str
-    location: str
-    date: str
-    start_date: str | None = None
-    end_date: str | None = None
-    date_precision: DatePrecision
-    is_upcoming: bool
-    dedupe_key: str
-    time: str | None = None
-    description: str | None = None
-    source_url: str | None = None
-
-
 class InitialData(BaseModel):
     restaurants: list[Restaurant]
-    events: list[SFEvent]
     last_updated: str | None = Field(default=None, alias="lastUpdated")
 
 
 class PushPreferences(BaseModel):
     neighborhoods: list[str] = Field(default_factory=list)
     cuisines: list[str] = Field(default_factory=list)
-    event_categories: list[str] = Field(default_factory=list)
 
 
 T = TypeVar("T")

@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.config import get_settings
 from app.shared.catalog import normalize_push_preferences
-from app.shared.types import EventCategory, PushPreferences
+from app.shared.types import PushPreferences
 
 TRUSTED_PUSH_HOSTS: set[str] = {
     "fcm.googleapis.com",
@@ -28,9 +28,6 @@ TRUSTED_PUSH_HOST_SUFFIXES: tuple[str, ...] = (
     ".push.apple.com",
     ".notify.windows.com",
 )
-
-VALID_EVENT_CATEGORIES: set[str] = {"art", "community", "festival", "film", "market", "music"}
-
 
 def is_trusted_push_endpoint(endpoint: str) -> bool:
     try:
@@ -85,7 +82,6 @@ class PushPreferencesPayload(BaseModel):
     model_config = {"extra": "forbid"}
     neighborhoods: list[str] = Field(default_factory=list)
     cuisines: list[str] = Field(default_factory=list)
-    event_categories: list[str] = Field(default_factory=list)
 
     @field_validator("neighborhoods", "cuisines")
     @classmethod
@@ -94,14 +90,6 @@ class PushPreferencesPayload(BaseModel):
         for v in value:
             if not v or len(v) > max_len:
                 raise ValueError(f"{info.field_name} entries must be 1..{max_len} chars")
-        return value
-
-    @field_validator("event_categories")
-    @classmethod
-    def _categories_valid(cls, value: list[str]) -> list[str]:
-        for v in value:
-            if v not in VALID_EVENT_CATEGORIES:
-                raise ValueError(f"invalid event category: {v}")
         return value
 
     def normalized(self) -> PushPreferences:
@@ -161,7 +149,6 @@ class PushPreferencesUpdatePayload(BaseModel):
 
 # Re-export for callers
 __all__ = [
-    "EventCategory",
     "PushKeysPayload",
     "PushPreferencesPayload",
     "PushPreferencesUpdatePayload",

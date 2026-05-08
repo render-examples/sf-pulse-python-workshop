@@ -16,20 +16,14 @@ from app import storage
 from app.push import is_subscription_gone, send_push
 from app.security import is_trusted_push_endpoint
 from app.shared.blocklist import is_blocked_restaurant_name
-from app.shared.catalog import (
-    derive_event_category,
-    event_matches_push_preferences,
-    format_event_category,
-    restaurant_matches_push_preferences,
-)
+from app.shared.catalog import restaurant_matches_push_preferences
 from app.shared.dates import DatePrecision, get_date_precision, normalize_date_text
 from app.shared.html import (
     decode_html_entities_recursive,
-    normalize_escaped_html_text,
     normalize_whitespace,
 )
-from app.shared.identity import build_event_identity_key, build_restaurant_identity_key
-from app.shared.types import Restaurant, SFEvent
+from app.shared.identity import build_restaurant_identity_key
+from app.shared.types import Restaurant
 from app.sse import broadcast
 
 log = logging.getLogger(__name__)
@@ -38,9 +32,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class ApplyDiscoveredItemsResult:
     added_restaurants: list[str] = field(default_factory=list)
-    added_events: list[str] = field(default_factory=list)
     updated_restaurants: list[str] = field(default_factory=list)
-    updated_events: list[str] = field(default_factory=list)
 
 
 DATE_PRECISION_SCORE: dict[DatePrecision, int] = {
@@ -57,36 +49,19 @@ def _restaurant_detail_href(id: int) -> str:
     return f"/restaurants/{id}"
 
 
-def _event_detail_href(id: int) -> str:
-    return f"/events/{id}"
-
-
 def _describe_restaurant(r: storage.StoredRestaurant) -> str:
     return f"{r.name} ({r.neighborhood} · {r.cuisine})"
 
 
-def _describe_event(e: storage.StoredEvent) -> str:
-    return f"{e.title} ({format_event_category(derive_event_category(e))} · {e.date})"
-
-
-def _build_push_payload(
-    restaurants: list[storage.StoredRestaurant], events: list[storage.StoredEvent]
-) -> dict:
-    if len(restaurants) == 1 and not events:
+def _build_push_payload(restaurants: list[storage.StoredRestaurant]) -> dict:
+    if len(restaurants) == 1:
         r = restaurants[0]
         return {
             "title": r.name,
             "body": f"{r.neighborhood} · {r.cuisine} · {r.opened_date}",
             "url": _restaurant_detail_href(r.id),
         }
-    if not restaurants and len(events) == 1:
-        e = events[0]
-        return {
-            "title": e.title,
-            "body": f"{format_event_category(derive_event_category(e))} · {e.date} · {e.location}",
-            "url": _event_detail_href(e.id),
-        }
-    lines = [_describe_restaurant(r) for r in restaurants] + [_describe_event(e) for e in events]
+    lines = [_describe_restaurant(r) for r in restaurants]
     return {"title": "SF Pulse update", "body": " · ".join(lines), "url": "/"}
 
 
@@ -104,19 +79,6 @@ def _summarize_restaurants(
         parts.append(
             f"{len(updated)} updated restaurant{suffix}: {', '.join(r.name for r in updated)}"
         )
-    return " · ".join(parts) if parts else None
-
-
-def _summarize_events(
-    added: list[storage.StoredEvent], updated: list[storage.StoredEvent]
-) -> str | None:
-    parts: list[str] = []
-    if added:
-        suffix = "s" if len(added) > 1 else ""
-        parts.append(f"{len(added)} new event{suffix}: {', '.join(e.title for e in added)}")
-    if updated:
-        suffix = "s" if len(updated) > 1 else ""
-        parts.append(f"{len(updated)} updated event{suffix}: {', '.join(e.title for e in updated)}")
     return " · ".join(parts) if parts else None
 
 
@@ -174,14 +136,6 @@ def _normalize_address_for_match(value: str | None) -> str:
     return _RE_NON_ALNUM.sub(" ", s).strip()
 
 
-def _normalize_event_title_for_match(value: str) -> str:
-    return normalize_whitespace(decode_html_entities_recursive(value)).lower()
-
-
-def _normalize_event_location_for_match(value: str) -> str:
-    return normalize_whitespace(decode_html_entities_recursive(value)).lower()
-
-
 def _precision_score(value: str) -> int:
     return DATE_PRECISION_SCORE[get_date_precision(_strip_qualifier(value))]
 
@@ -202,22 +156,6 @@ def _is_generic_neighborhood(value: str | None) -> bool:
 
 def _is_generic_cuisine(value: str | None) -> bool:
     return normalize_whitespace(value or "").lower() == "new opening"
-
-
-def _is_generic_event_location(value: str | None) -> bool:
-    return normalize_whitespace(value or "").lower() == "san francisco"
-
-
-_RE_FUNCHEAP_FOOTER = re.compile(r"appeared first on funcheap")
-
-
-def _event_description_score(value: str | None) -> int:
-    if not value:
-        return 0
-    s = decode_html_entities_recursive(value).lower()
-    if _RE_FUNCHEAP_FOOTER.search(s):
-        return 1
-    return len(s) + 10
 
 
 def _merge_restaurant(
@@ -260,45 +198,6 @@ def _merge_restaurant(
     )
 
 
-def _merge_event(
-    incoming: storage.NewEvent, existing: storage.StoredEvent | None
-) -> storage.NewEvent:
-    inc_date = normalize_date_text(incoming.date)
-    exi_date = normalize_date_text(existing.date) if existing else None
-    inc_title = normalize_escaped_html_text(incoming.title)
-    exi_title = normalize_escaped_html_text(existing.title) if existing else None
-    inc_loc = normalize_whitespace(decode_html_entities_recursive(incoming.location))
-    exi_loc = normalize_whitespace(decode_html_entities_recursive(existing.location if existing else ""))
-    inc_desc = normalize_escaped_html_text(incoming.description) if incoming.description else None
-    exi_desc = (
-        normalize_escaped_html_text(existing.description)
-        if existing and existing.description
-        else None
-    )
-
-    chosen_title = inc_title if (len(inc_title) >= len(exi_title or "")) else (exi_title or inc_title)
-    chosen_location = (
-        inc_loc
-        if inc_loc and (not _is_generic_event_location(inc_loc) or not exi_loc)
-        else (exi_loc or inc_loc)
-    )
-    chosen_date = inc_date if _prefers_incoming_date(exi_date, inc_date) else (exi_date or inc_date)
-    chosen_description = (
-        inc_desc
-        if _event_description_score(inc_desc) >= _event_description_score(exi_desc)
-        else exi_desc
-    )
-
-    return storage.NewEvent(
-        title=chosen_title,
-        location=chosen_location,
-        date=chosen_date,
-        time=incoming.time or (existing.time if existing else None),
-        description=chosen_description,
-        source_url=incoming.source_url or (existing.source_url if existing else None),
-    )
-
-
 # ── Matching strategies ───────────────────────────────────────────────────────
 
 
@@ -333,52 +232,6 @@ def _find_matching_restaurant(
     return None
 
 
-def _build_event_source_match_key(
-    *, title: str, date: str, source_url: str | None
-) -> str | None:
-    if not source_url:
-        return None
-    return "|".join(
-        [source_url, _normalize_event_title_for_match(title), normalize_date_text(date).lower()]
-    )
-
-
-def _find_matching_event(
-    e: storage.NewEvent, existing: list[storage.StoredEvent]
-) -> storage.StoredEvent | None:
-    dedupe = build_event_identity_key(
-        title=e.title, location=e.location, date_text=normalize_date_text(e.date)
-    )
-    for cand in existing:
-        if cand.dedupe_key == dedupe:
-            return cand
-
-    src_key = _build_event_source_match_key(title=e.title, date=e.date, source_url=e.source_url)
-    if src_key:
-        for cand in existing:
-            cand_key = _build_event_source_match_key(
-                title=cand.title, date=cand.date, source_url=cand.source_url
-            )
-            if cand_key == src_key:
-                return cand
-
-    norm_title = _normalize_event_title_for_match(e.title)
-    norm_date = normalize_date_text(e.date).lower()
-    norm_loc = _normalize_event_location_for_match(e.location)
-    for cand in existing:
-        if (
-            _normalize_event_title_for_match(cand.title) == norm_title
-            and normalize_date_text(cand.date).lower() == norm_date
-            and (
-                _normalize_event_location_for_match(cand.location) == norm_loc
-                or _is_generic_event_location(cand.location)
-                or _is_generic_event_location(e.location)
-            )
-        ):
-            return cand
-    return None
-
-
 # ── Change detection ──────────────────────────────────────────────────────────
 
 
@@ -394,17 +247,6 @@ def _restaurant_changed(existing: storage.StoredRestaurant, n: storage.NewRestau
     )
 
 
-def _event_changed(existing: storage.StoredEvent, n: storage.NewEvent) -> bool:
-    return (
-        existing.title != n.title
-        or existing.location != n.location
-        or existing.date != n.date
-        or existing.time != n.time
-        or existing.description != n.description
-        or existing.source_url != n.source_url
-    )
-
-
 # ── Public types for upserted broadcast events ────────────────────────────────
 
 
@@ -412,16 +254,11 @@ def _stored_restaurant_to_public(r: storage.StoredRestaurant) -> Restaurant:
     return Restaurant.model_validate(r.model_dump())
 
 
-def _stored_event_to_public(e: storage.StoredEvent) -> SFEvent:
-    return SFEvent.model_validate(e.model_dump())
-
-
 # ── Push fan-out ──────────────────────────────────────────────────────────────
 
 
 async def _push_to_interested(
     restaurants: list[storage.StoredRestaurant],
-    events: list[storage.StoredEvent],
     *,
     pool: asyncpg.Pool | None = None,
 ) -> None:
@@ -439,11 +276,14 @@ async def _push_to_interested(
         if not is_trusted_push_endpoint(sub.endpoint):
             await storage.remove_subscription(sub.endpoint, pool=pool)
             return
-        matching_r = [r for r in restaurants if restaurant_matches_push_preferences(_stored_restaurant_to_public(r), sub.preferences)]
-        matching_e = [e for e in events if event_matches_push_preferences(_stored_event_to_public(e), sub.preferences)]
-        if not matching_r and not matching_e:
+        matching_r = [
+            r
+            for r in restaurants
+            if restaurant_matches_push_preferences(_stored_restaurant_to_public(r), sub.preferences)
+        ]
+        if not matching_r:
             return
-        payload = _build_push_payload(matching_r, matching_e)
+        payload = _build_push_payload(matching_r)
         try:
             await asyncio.to_thread(
                 send_push,
@@ -466,16 +306,12 @@ async def _push_to_interested(
 async def apply_discovered_items(
     *,
     restaurants: Iterable[storage.NewRestaurant] = (),
-    events: Iterable[storage.NewEvent] = (),
     pool: asyncpg.Pool | None = None,
 ) -> ApplyDiscoveredItemsResult:
     existing_r = await storage.get_restaurants(pool=pool)
-    existing_e = await storage.get_events(pool=pool)
     result = ApplyDiscoveredItemsResult()
     added_r_rows: list[storage.StoredRestaurant] = []
     updated_r_rows: list[storage.StoredRestaurant] = []
-    added_e_rows: list[storage.StoredEvent] = []
-    updated_e_rows: list[storage.StoredEvent] = []
     versions: list[str] = []
 
     for r in restaurants:
@@ -503,30 +339,7 @@ async def apply_discovered_items(
                 existing_r[idx] = persisted
                 break
 
-    for e in events:
-        match = _find_matching_event(e, existing_e)
-        merged = _merge_event(e, match)
-        if match is None:
-            persisted = await storage.add_event(merged, pool=pool)
-            update = await storage.record_update("event", persisted.title, "added", pool=pool)
-            versions.append(update.occurred_at.isoformat())
-            result.added_events.append(persisted.title)
-            added_e_rows.append(persisted)
-            existing_e.append(persisted)
-            continue
-        if not _event_changed(match, merged):
-            continue
-        persisted = await storage.update_event(match.id, merged, pool=pool)
-        update = await storage.record_update("event", persisted.title, "updated", pool=pool)
-        versions.append(update.occurred_at.isoformat())
-        result.updated_events.append(persisted.title)
-        updated_e_rows.append(persisted)
-        for idx, item in enumerate(existing_e):
-            if item.id == match.id:
-                existing_e[idx] = persisted
-                break
-
-    if result.added_restaurants or result.updated_restaurants or result.added_events or updated_e_rows:
+    if result.added_restaurants or result.updated_restaurants:
         version = sorted(versions)[-1] if versions else None
         if version is None:
             ts = await storage.get_latest_update_timestamp(pool=pool)
@@ -542,17 +355,7 @@ async def apply_discovered_items(
                     "summary": _summarize_restaurants(added_r_rows, updated_r_rows),
                 },
             )
-        if added_e_rows or updated_e_rows:
-            await broadcast(
-                "events",
-                {
-                    "version": version,
-                    "upserted": [e.model_dump(mode="json") for e in [*added_e_rows, *updated_e_rows]],
-                    "deleted": [],
-                    "summary": _summarize_events(added_e_rows, updated_e_rows),
-                },
-            )
-        await _push_to_interested([*added_r_rows, *updated_r_rows], added_e_rows, pool=pool)
+        await _push_to_interested([*added_r_rows, *updated_r_rows], pool=pool)
 
     return result
 
@@ -579,18 +382,6 @@ def dedup_restaurants(items: list[storage.NewRestaurant]) -> list[storage.NewRes
     return out
 
 
-def dedup_events(items: list[storage.NewEvent]) -> list[storage.NewEvent]:
-    seen: set[str] = set()
-    out: list[storage.NewEvent] = []
-    for e in items:
-        key = build_event_identity_key(title=e.title, location=e.location, date_text=e.date)
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(e)
-    return out
-
-
 async def run_daily_refresh(*, pool: asyncpg.Pool | None = None) -> dict[str, int]:
     """Run one refresh cycle locally without the Render Workflows runtime.
 
@@ -599,15 +390,9 @@ async def run_daily_refresh(*, pool: asyncpg.Pool | None = None) -> dict[str, in
     """
     from app.config import get_settings
     from app.llm import get_llm_client
-    from app.llm.pipeline import (
-        extract_events_from_articles,
-        extract_restaurants_from_articles,
-    )
-    from app.sources.cal_academy import fetch_cal_academy_events
-    from app.sources.ddg_search import search_events_ddg, search_restaurants_ddg
+    from app.llm.pipeline import extract_restaurants_from_articles
+    from app.sources.ddg_search import search_restaurants_ddg
     from app.sources.eater import fetch_eater_sf_articles
-    from app.sources.famsf import fetch_famsf_events
-    from app.sources.funcheap import fetch_funcheap_events
     from app.sources.michelin import fetch_michelin_restaurants
     from app.sources.sfist import fetch_sfist_restaurants
 
@@ -636,64 +421,28 @@ async def run_daily_refresh(*, pool: asyncpg.Pool | None = None) -> dict[str, in
     michelin_items = _settled(michelin_raw, "Michelin", [])
     ddg_restaurant_articles = _settled(ddg_r_raw, "DDG restaurants", [])
 
-    log.info("[refresh] fetching event sources...")
-    funcheap_raw, famsf_raw, cal_academy_raw, ddg_e_raw = await asyncio.gather(
-        fetch_funcheap_events(),
-        fetch_famsf_events(),
-        fetch_cal_academy_events(),
-        search_events_ddg(),
-        return_exceptions=True,
-    )
-
-    funcheap_events = _settled(funcheap_raw, "Funcheap", [])
-    famsf_events = _settled(famsf_raw, "FAMSF", [])
-    cal_academy_events = _settled(cal_academy_raw, "Cal Academy", [])
-    ddg_event_articles = _settled(ddg_e_raw, "DDG events", [])
-
     llm_restaurants: list[storage.NewRestaurant] = []
-    llm_events: list[storage.NewEvent] = []
 
     if llm is not None:
         log.info("[refresh] running LLM extraction...")
-        r_results, e_results = await asyncio.gather(
-            asyncio.gather(
-                extract_restaurants_from_articles(llm, eater_articles),
-                extract_restaurants_from_articles(llm, ddg_restaurant_articles),
-                return_exceptions=True,
-            ),
-            asyncio.gather(
-                extract_events_from_articles(llm, ddg_event_articles),
-                return_exceptions=True,
-            ),
+        r_results = await asyncio.gather(
+            extract_restaurants_from_articles(llm, eater_articles),
+            extract_restaurants_from_articles(llm, ddg_restaurant_articles),
             return_exceptions=True,
         )
 
-        if not isinstance(r_results, BaseException):
-            for r in r_results:
-                llm_restaurants.extend(_settled(r, "LLM restaurants", []))
+        for r in r_results:
+            llm_restaurants.extend(_settled(r, "LLM restaurants", []))
 
-        if not isinstance(e_results, BaseException):
-            for e in e_results:
-                llm_events.extend(_settled(e, "LLM events", []))
-
-        log.info(
-            "[refresh] LLM extracted: %d restaurants, %d events",
-            len(llm_restaurants),
-            len(llm_events),
-        )
+        log.info("[refresh] LLM extracted: %d restaurants", len(llm_restaurants))
 
     restaurants = dedup_restaurants([*sfist_items, *michelin_items, *llm_restaurants])
-    events = dedup_events([*funcheap_events, *famsf_events, *cal_academy_events, *llm_events])
 
-    log.info(
-        "[refresh] candidates: %d restaurants, %d events",
-        len(restaurants),
-        len(events),
-    )
+    log.info("[refresh] candidates: %d restaurants", len(restaurants))
 
-    if restaurants or events:
-        await apply_discovered_items(restaurants=restaurants, events=events, pool=pool)
+    if restaurants:
+        await apply_discovered_items(restaurants=restaurants, pool=pool)
     else:
         log.info("[refresh] nothing new")
 
-    return {"restaurants": len(restaurants), "events": len(events)}
+    return {"restaurants": len(restaurants)}

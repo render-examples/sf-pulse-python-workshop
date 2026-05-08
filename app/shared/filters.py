@@ -7,9 +7,8 @@ from dataclasses import dataclass, field
 from datetime import date
 from urllib.parse import urlencode
 
-from app.shared.catalog import derive_event_category, derive_event_neighborhood
 from app.shared.dates import today_utc
-from app.shared.types import Restaurant, SFEvent
+from app.shared.types import Restaurant
 
 _ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -25,23 +24,11 @@ class RestaurantFilters:
 
 
 @dataclass
-class EventFilters:
-    query: str = ""
-    neighborhoods: list[str] = field(default_factory=list)
-    categories: list[str] = field(default_factory=list)
-    upcoming_only: bool = False
-    from_date: str = ""
-    to_date: str = ""
-
-
-@dataclass
 class HomeFilters:
     restaurants: RestaurantFilters = field(default_factory=RestaurantFilters)
-    events: EventFilters = field(default_factory=EventFilters)
 
 
 DEFAULT_RESTAURANT_FILTERS = RestaurantFilters()
-DEFAULT_EVENT_FILTERS = EventFilters()
 DEFAULT_HOME_FILTERS = HomeFilters()
 
 
@@ -74,14 +61,6 @@ def parse_home_filters(params: dict[str, str]) -> HomeFilters:
             from_date=_normalize_iso_date(_get(params, "r-from")),
             to_date=_normalize_iso_date(_get(params, "r-to")),
         ),
-        events=EventFilters(
-            query=(_get(params, "e-q") or "").strip(),
-            neighborhoods=_parse_list(_get(params, "e-neighborhood")),
-            categories=_parse_list(_get(params, "e-category")),
-            upcoming_only=_get(params, "e-upcoming") == "1",
-            from_date=_normalize_iso_date(_get(params, "e-from")),
-            to_date=_normalize_iso_date(_get(params, "e-to")),
-        ),
     )
 
 
@@ -100,20 +79,6 @@ def serialize_home_filters(filters: HomeFilters) -> str:
         pairs.append(("r-from", r.from_date))
     if r.to_date:
         pairs.append(("r-to", r.to_date))
-
-    e = filters.events
-    if e.query:
-        pairs.append(("e-q", e.query))
-    if e.neighborhoods:
-        pairs.append(("e-neighborhood", ",".join(e.neighborhoods)))
-    if e.categories:
-        pairs.append(("e-category", ",".join(e.categories)))
-    if e.upcoming_only:
-        pairs.append(("e-upcoming", "1"))
-    if e.from_date:
-        pairs.append(("e-from", e.from_date))
-    if e.to_date:
-        pairs.append(("e-to", e.to_date))
     return urlencode(pairs)
 
 
@@ -183,20 +148,4 @@ def apply_restaurant_filters(
         and _date_overlaps(
             r.opened_start_date, r.opened_end_date, filters.from_date, filters.to_date
         )
-    ]
-
-
-def apply_event_filters(events: list[SFEvent], filters: EventFilters) -> list[SFEvent]:
-    return [
-        e
-        for e in events
-        if _matches_query(
-            filters.query, [e.title, e.location, e.description, derive_event_category(e)]
-        )
-        and _matches_multi(filters.neighborhoods, derive_event_neighborhood(e))
-        and _matches_multi(filters.categories, derive_event_category(e))
-        and _matches_upcoming(
-            e.is_upcoming, e.start_date, e.end_date, filters.upcoming_only
-        )
-        and _date_overlaps(e.start_date, e.end_date, filters.from_date, filters.to_date)
     ]

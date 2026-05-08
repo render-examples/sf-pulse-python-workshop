@@ -77,4 +77,4 @@ r.workflows.run_task("sf-pulse-python-workflow/daily-refresh", [])
 - **`RENDER_API_KEY` not configured** in the cron logs → set it on the cron service env vars.
 - **`Task not found`** → double-check the workflow slug and that the worker has deployed at least once.
 - **Tasks timeout** → the orchestrator has a 600s timeout. If sources are slow, increase the timeout on the `daily_refresh` decorator.
-- **No restaurants/events appear after a run** → check that `LLM_API_KEY` is set on the workflow service. Without it, only the regex sources (SFist, Michelin, FunCheap, FAMSF, Cal Academy) produce results.
+- **No restaurants appear after a run** → check that `LLM_API_KEY` is set on the workflow service. Without it, only the regex sources (SFist, Michelin) produce results.

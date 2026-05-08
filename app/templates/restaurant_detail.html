@@ -13,7 +13,7 @@
       {% if restaurant.highlight_kind == "michelin" %}
         Michelin-recognized restaurant tracked by SF Pulse.
       {% else %}
-        SF Pulse detail page with opening date, neighborhood, source links, and nearby events.
+        SF Pulse detail page with opening date, neighborhood, and source links.
       {% endif %}
     </p>
 
@@ -67,22 +67,6 @@
           <span class="detailListMeta">{{ "Yes" if restaurant.is_upcoming else "No" }}</span>
         </li>
       </ul>
-    </section>
-
-    <section class="detailSection">
-      <h2 class="detailSectionTitle">Nearby events</h2>
-      {% if nearby_events %}
-      <ul class="detailList">
-        {% for event in nearby_events %}
-        <li class="detailListItem">
-          <a href="/events/{{ event.id }}">{{ event.title }}</a>
-          <span class="detailListMeta">{{ event.date }}</span>
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p class="detailListMeta">No related nearby events are currently tracked.</p>
-      {% endif %}
     </section>
 
     <section class="detailSection">

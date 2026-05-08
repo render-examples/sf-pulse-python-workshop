@@ -21,7 +21,7 @@
 
   function activatePanelFromHash() {
     const hash = (window.location.hash || '#restaurants').replace('#', '')
-    showPanel(['restaurants', 'events', 'diagram'].includes(hash) ? hash : 'restaurants')
+    showPanel(['restaurants', 'diagram'].includes(hash) ? hash : 'restaurants')
   }
 
   for (const t of tabs) {
@@ -52,7 +52,6 @@
     if (typeof EventSource === 'undefined') return
     source = new EventSource('/api/events-stream')
     source.addEventListener('restaurants', (ev) => onCollectionUpdate('restaurants', ev))
-    source.addEventListener('events', (ev) => onCollectionUpdate('events', ev))
     source.addEventListener('error', () => {
       // Browser auto-reconnects; nothing to do.
     })

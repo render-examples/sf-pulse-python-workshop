@@ -4,7 +4,7 @@ Public surface:
 - get_llm_client(): factory reading config; returns None when no API key.
 - create_llm_client(): explicit construction.
 - extract_structured(): single-call wrapper with one-shot retry.
-- extract_restaurants_from_articles() / extract_events_from_articles(): batched pipeline.
+- extract_restaurants_from_articles(): batched pipeline.
 - set_llm_client_for_tests(): test injection hook.
 """
 
@@ -14,29 +14,21 @@ from typing import Literal
 
 from app.config import get_settings
 from app.llm.extract import LLMClient, extract_structured
-from app.llm.pipeline import (
-    extract_events_from_articles,
-    extract_restaurants_from_articles,
-)
+from app.llm.pipeline import extract_restaurants_from_articles
 from app.llm.providers.anthropic_provider import create_anthropic_client
 from app.llm.providers.openai_provider import create_openai_client
 from app.llm.schemas import (
-    EVENT_EXTRACTION_PROMPT,
     RESTAURANT_EXTRACTION_PROMPT,
-    EventExtraction,
     RawArticle,
     RestaurantExtraction,
 )
 
 __all__ = [
-    "EVENT_EXTRACTION_PROMPT",
-    "EventExtraction",
     "LLMClient",
     "RESTAURANT_EXTRACTION_PROMPT",
     "RawArticle",
     "RestaurantExtraction",
     "create_llm_client",
-    "extract_events_from_articles",
     "extract_restaurants_from_articles",
     "extract_structured",
     "get_llm_client",

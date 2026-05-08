@@ -2,22 +2,7 @@
 
 from __future__ import annotations
 
-from app.shared.identity import build_event_identity_key, build_restaurant_identity_key
-
-
-def test_event_key_is_lowercase_pipe_joined() -> None:
-    key = build_event_identity_key(
-        title="  Outside Lands ",
-        location="Golden Gate Park",
-        date_text="August 8-10, 2026",
-    )
-    assert key == "outside lands|golden gate park|august 8-10, 2026"
-
-
-def test_event_key_deterministic_across_whitespace() -> None:
-    a = build_event_identity_key(title="A", location="B", date_text="C")
-    b = build_event_identity_key(title=" a ", location="b", date_text="c")
-    assert a == b
+from app.shared.identity import build_restaurant_identity_key
 
 
 def test_restaurant_key_prefers_address_over_neighborhood() -> None:

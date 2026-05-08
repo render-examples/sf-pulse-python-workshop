@@ -45,18 +45,11 @@ def test_push_preferences_payload_rejects_long_neighborhood() -> None:
         PushPreferencesPayload(neighborhoods=[too_long])
 
 
-def test_push_preferences_payload_rejects_unknown_category() -> None:
-    with pytest.raises(Exception):
-        PushPreferencesPayload(event_categories=["not-a-category"])
-
-
 def test_push_preferences_payload_normalized() -> None:
     payload = PushPreferencesPayload(
         neighborhoods=["Mission", "Mission"],
         cuisines=["Pizza"],
-        event_categories=["music"],
     )
     normalized = payload.normalized()
     assert normalized.neighborhoods == ["Mission"]
     assert normalized.cuisines == ["Pizza"]
-    assert normalized.event_categories == ["music"]

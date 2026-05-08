@@ -14,10 +14,6 @@
 │     ├── fetch_sfist          ──▶ list[NewRestaurant] (regex)         │
 │     ├── fetch_michelin       ──▶ list[NewRestaurant] (regex)         │
 │     ├── search_restaurants   ──▶ list[RawArticle] (DDG)              │
-│     ├── fetch_funcheap       ──▶ list[NewEvent]                      │
-│     ├── fetch_famsf          ──▶ list[NewEvent]                      │
-│     ├── fetch_cal_academy    ──▶ list[NewEvent]                      │
-│     ├── search_events        ──▶ list[RawArticle]                    │
 │     │                                                                │
 │     ▼                                                                │
 │   LLM extraction (OpenAI/Anthropic) — articles → structured items    │
@@ -49,11 +45,11 @@
 
 ## Source modules
 
-Each scraper in `app.sources` produces either `list[NewRestaurant]` / `list[NewEvent]` directly (regex sources: SFist, Michelin, FunCheap, FAMSF, Cal Academy) or `list[RawArticle]` for the LLM pipeline to extract from (Eater SF, DuckDuckGo).
+Each scraper in `app.sources` produces either `list[NewRestaurant]` directly (regex sources: SFist, Michelin) or `list[RawArticle]` for the LLM pipeline to extract from (Eater SF, DuckDuckGo).
 
 ## LLM extraction
 
-`app.llm.pipeline.extract_restaurants_from_articles` and `extract_events_from_articles` batch articles into ~12K-character chunks, send each batch to the configured provider (OpenAI via `chat.completions.parse` with a Pydantic `response_format`, or Anthropic via tool-use), and merge results.
+`app.llm.pipeline.extract_restaurants_from_articles` batches articles into ~12K-character chunks, sends each batch to the configured provider (OpenAI via `chat.completions.parse` with a Pydantic `response_format`, or Anthropic via tool-use), and merges results.
 
 The provider is auto-detected from the `LLM_API_KEY` prefix (`sk-ant-` → Anthropic, else OpenAI) unless `LLM_PROVIDER` is explicitly set.
 
@@ -62,17 +58,16 @@ If `LLM_API_KEY` is not configured, the factory returns `None` and the pipeline 
 ## Deduplication
 
 - **Restaurants**: `identity_key = lower(name) | (lower(address) || lower(neighborhood))`. ON CONFLICT (identity_key) updates fields.
-- **Events**: `dedupe_key = lower(title) | lower(location) | lower(normalized_date_text)`. Events with the same dedupe key are treated as the same event.
 - `app.refresh` also has fuzzier matching strategies for "near-miss" duplicates (e.g. address normalization, source-URL match) before falling back to identity-key match.
 
 ## Realtime
 
 - `app.sse.broadcast(event, data)` publishes to Redis (`sf-pulse:realtime` channel) when `REDIS_URL` is set, falling back to in-process fan-out otherwise.
 - The `/api/events-stream` endpoint creates a per-client async queue. Heartbeats every 25 seconds.
-- The browser receives `restaurants` and `events` events with `{version, upserted, deleted, summary}` payloads. The current `static/home.js` does a soft reload after a brief debounce; a future enhancement could splice rows in place.
+- The browser receives `restaurants` events with `{version, upserted, deleted, summary}` payloads. The current `static/home.js` does a soft reload after a brief debounce; a future enhancement could splice rows in place.
 
 ## Push notifications
 
 - VAPID keys live in `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`. If unset, the push fan-out is silently skipped.
-- After `apply_discovered_items` finishes, only subscribers whose preferences match the new items receive a push (`restaurant_matches_push_preferences` / `event_matches_push_preferences`).
+- After `apply_discovered_items` finishes, only subscribers whose preferences match the new items receive a push (`restaurant_matches_push_preferences`).
 - Push provider endpoints are restricted to a trusted hostname allowlist (`is_trusted_push_endpoint`).

@@ -66,20 +66,9 @@ async def test_preferences_update(client: AsyncClient, clean_db) -> None:
         "preferences": {
             "neighborhoods": ["Mission"],
             "cuisines": ["Pizza"],
-            "event_categories": ["music"],
         },
     }
     resp = await client.post("/api/push/preferences", json=update_payload)
     assert resp.status_code == 200
     body = resp.json()
     assert body["preferences"]["neighborhoods"] == ["Mission"]
-    assert body["preferences"]["event_categories"] == ["music"]
-
-
-async def test_preferences_rejects_invalid_category(client: AsyncClient) -> None:
-    payload = {
-        "endpoint": "https://fcm.googleapis.com/fcm/send/x",
-        "preferences": {"event_categories": ["not-a-real-category"]},
-    }
-    resp = await client.post("/api/push/preferences", json=payload)
-    assert resp.status_code == 422

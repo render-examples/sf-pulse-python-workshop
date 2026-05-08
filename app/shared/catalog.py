@@ -1,21 +1,11 @@
-"""Neighborhoods, event categories, push preference matching — port of shared/catalog.ts."""
+"""Neighborhoods + push preference matching — port of shared/catalog.ts."""
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Literal
 
-from app.shared.types import EventCategory, PushPreferences, Restaurant, SFEvent
-
-EVENT_CATEGORY_LABELS: dict[EventCategory, str] = {
-    "art": "Art",
-    "community": "Community",
-    "festival": "Festival",
-    "film": "Film",
-    "market": "Market",
-    "music": "Music",
-}
+from app.shared.types import PushPreferences, Restaurant
 
 
 @dataclass(frozen=True)
@@ -75,64 +65,11 @@ def normalize_push_preferences(prefs: PushPreferences | dict | None) -> PushPref
 
     neighborhoods = _unique_sorted([str(v).strip() for v in (prefs_dict.get("neighborhoods") or [])])
     cuisines = _unique_sorted([str(v).strip() for v in (prefs_dict.get("cuisines") or [])])
-    categories = [
-        v
-        for v in _unique_sorted([str(v).strip() for v in (prefs_dict.get("event_categories") or [])])
-        if v in EVENT_CATEGORY_LABELS
-    ]
-    return PushPreferences(
-        neighborhoods=neighborhoods,
-        cuisines=cuisines,
-        event_categories=categories,
-    )
+    return PushPreferences(neighborhoods=neighborhoods, cuisines=cuisines)
 
 
 def has_push_preferences(prefs: PushPreferences) -> bool:
-    return bool(prefs.neighborhoods or prefs.cuisines or prefs.event_categories)
-
-
-def format_event_category(category: EventCategory) -> str:
-    return EVENT_CATEGORY_LABELS[category]
-
-
-_RE_MARKET = re.compile(r"(night market|market\b|vendor|craft fair)", re.IGNORECASE)
-_RE_FILM = re.compile(r"(film|screening|roxie|cinema|theater|theatre|4k)", re.IGNORECASE)
-_RE_MUSIC = re.compile(r"(concert|live music|music hall|goldenvoice|popscene|dj\b|album release|band\b|tour\b)", re.IGNORECASE)
-_RE_FESTIVAL = re.compile(r"(festival|parade|carnaval|celebration|fair\b|holiday)", re.IGNORECASE)
-_RE_ART = re.compile(r"(art\b|poetry|gallery|performance project|installation)", re.IGNORECASE)
-
-
-def derive_event_category(event: SFEvent | dict) -> EventCategory:
-    if isinstance(event, SFEvent):
-        title = event.title
-        location = event.location
-        description = event.description or ""
-    else:
-        title = event.get("title", "")
-        location = event.get("location", "")
-        description = event.get("description") or ""
-
-    haystack = f"{title} {location} {description}".lower()
-
-    if _RE_MARKET.search(haystack):
-        return "market"
-    if _RE_FILM.search(haystack):
-        return "film"
-    if _RE_MUSIC.search(haystack):
-        return "music"
-    if _RE_FESTIVAL.search(haystack):
-        return "festival"
-    if _RE_ART.search(haystack):
-        return "art"
-    return "community"
-
-
-def derive_event_neighborhood(event: SFEvent | dict) -> str:
-    location = event.location if isinstance(event, SFEvent) else event.get("location", "")
-    for alias in NEIGHBORHOOD_ALIASES:
-        if any(p.search(location) for p in alias.patterns):
-            return alias.label
-    return "Other SF"
+    return bool(prefs.neighborhoods or prefs.cuisines)
 
 
 def get_restaurant_neighborhood_options(restaurants: list[Restaurant]) -> list[str]:
@@ -141,15 +78,6 @@ def get_restaurant_neighborhood_options(restaurants: list[Restaurant]) -> list[s
 
 def get_restaurant_cuisine_options(restaurants: list[Restaurant]) -> list[str]:
     return _unique_sorted([r.cuisine for r in restaurants])
-
-
-def get_event_neighborhood_options(events: list[SFEvent]) -> list[str]:
-    return _unique_sorted([derive_event_neighborhood(e) for e in events])
-
-
-def get_event_category_options(events: list[SFEvent]) -> list[EventCategory]:
-    cats = _unique_sorted([derive_event_category(e) for e in events])
-    return [c for c in cats if c in EVENT_CATEGORY_LABELS]  # type: ignore[misc]
 
 
 def matches_preferred_neighborhood(neighborhood: str, prefs: PushPreferences) -> bool:
@@ -166,22 +94,10 @@ def matches_preferred_cuisine(cuisine: str, prefs: PushPreferences) -> bool:
     return any(_normalize_text(v) == norm for v in prefs.cuisines)
 
 
-def matches_preferred_event_category(category: EventCategory, prefs: PushPreferences) -> bool:
-    if not prefs.event_categories:
-        return True
-    return category in prefs.event_categories
-
-
 def restaurant_matches_push_preferences(restaurant: Restaurant, prefs: PushPreferences) -> bool:
     return matches_preferred_neighborhood(
         restaurant.neighborhood, prefs
     ) and matches_preferred_cuisine(restaurant.cuisine, prefs)
-
-
-def event_matches_push_preferences(event: SFEvent, prefs: PushPreferences) -> bool:
-    return matches_preferred_neighborhood(
-        derive_event_neighborhood(event), prefs
-    ) and matches_preferred_event_category(derive_event_category(event), prefs)
 
 
 def find_nearest_neighborhood(lat: float, lng: float) -> NeighborhoodAlias:
@@ -200,18 +116,11 @@ def find_nearest_neighborhood(lat: float, lng: float) -> NeighborhoodAlias:
 @dataclass
 class NeighborhoodGroup:
     restaurants: list[Restaurant]
-    events: list[SFEvent]
 
 
-def group_by_neighborhood(
-    restaurants: list[Restaurant], events: list[SFEvent]
-) -> dict[str, NeighborhoodGroup]:
-    groups: dict[str, NeighborhoodGroup] = {
-        a.label: NeighborhoodGroup([], []) for a in ALL_NEIGHBORHOODS
-    }
+def group_by_neighborhood(restaurants: list[Restaurant]) -> dict[str, NeighborhoodGroup]:
+    groups: dict[str, NeighborhoodGroup] = {a.label: NeighborhoodGroup([]) for a in ALL_NEIGHBORHOODS}
     for r in restaurants:
         key = r.neighborhood if r.neighborhood in groups else "Other SF"
         groups[key].restaurants.append(r)
-    for e in events:
-        groups[derive_event_neighborhood(e)].events.append(e)
     return groups
