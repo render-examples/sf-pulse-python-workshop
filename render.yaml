@@ -49,8 +49,7 @@ projects:
             buildCommand: pip install --upgrade uv && uv sync --frozen
             startCommand: uv run python -m bin.trigger_workflow
             envVars:
-              - key: RENDER_API_KEY
-                sync: false
+              - fromGroup: sf-pulse-env
               - key: SF_PULSE_WORKFLOW_SLUG
                 sync: false
 
