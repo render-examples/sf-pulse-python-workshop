@@ -1,7 +1,6 @@
 # SF Pulse
 
-SF Pulse tracks new San Francisco restaurant openings.
-This is the **Python port** of [`render-examples/sf-pulse-ts`](https://github.com/render-examples/sf-pulse-ts) — a FastAPI + asyncpg + Render Workflows reference app showcasing the [Render Python SDK](https://github.com/render-oss/sdk/tree/main/python).
+SF Pulse tracks new San Francisco restaurant openings and local events. It's a FastAPI + asyncpg + Render Workflows reference app showcasing the [Render Python SDK](https://github.com/render-oss/sdk/tree/main/python).
 
 The interactive workflow diagram is preserved as a small Vite + React sub-project (`web/diagram/`) and served as a static bundle at `/diagram/`.
 
