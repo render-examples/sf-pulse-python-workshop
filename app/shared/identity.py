@@ -12,3 +12,9 @@ def build_restaurant_identity_key(
 ) -> str:
     secondary = _normalize_part(address) or _normalize_part(neighborhood)
     return f"{_normalize_part(name)}|{secondary}"
+
+
+def build_event_identity_key(*, title: str, location: str, date_text: str) -> str:
+    return "|".join(
+        [_normalize_part(title), _normalize_part(location), _normalize_part(date_text)]
+    )

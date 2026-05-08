@@ -17,8 +17,17 @@ from pydantic import BaseModel
 
 from app.db import get_pool
 from app.shared.catalog import normalize_push_preferences
-from app.shared.dates import DatePrecision, derive_structured_date, today_utc
-from app.shared.identity import build_restaurant_identity_key
+from app.shared.dates import (
+    DatePrecision,
+    compare_date_text,
+    derive_structured_date,
+    normalize_date_text,
+    today_utc,
+)
+from app.shared.identity import (
+    build_event_identity_key,
+    build_restaurant_identity_key,
+)
 from app.shared.types import HighlightKind, PushPreferences
 
 
@@ -74,6 +83,32 @@ class NewRestaurant:
     address: str | None = None
     source_url: str | None = None
     highlight_kind: HighlightKind = "opening"
+
+
+class StoredEvent(BaseModel):
+    id: int
+    title: str
+    location: str
+    date: str
+    start_date: str | None = None
+    end_date: str | None = None
+    date_precision: DatePrecision
+    is_upcoming: bool
+    dedupe_key: str
+    time: str | None = None
+    description: str | None = None
+    source_url: str | None = None
+    added_at: datetime
+
+
+@dataclass
+class NewEvent:
+    title: str
+    location: str
+    date: str
+    time: str | None = None
+    description: str | None = None
+    source_url: str | None = None
 
 
 # ── Pool helpers ───────────────────────────────────────────────────────────────
@@ -350,6 +385,164 @@ async def delete_restaurant(id: int, *, pool: asyncpg.Pool | None = None) -> Non
     await _execute("DELETE FROM restaurants WHERE id=$1", id, pool=pool)
 
 
+# ── Events ─────────────────────────────────────────────────────────────────────
+
+
+def _row_to_event(row: asyncpg.Record | dict) -> StoredEvent:
+    data = dict(row)
+    start = _to_iso_date(data.get("start_date"))
+    end = _to_iso_date(data.get("end_date"))
+    precision = data.get("date_precision") or "unknown"
+    is_upcoming = bool(data.get("is_upcoming"))
+
+    if start is None or end is None or precision == "unknown":
+        structured = derive_structured_date(data["date"])
+        start = start or structured.start_date
+        end = end or structured.end_date
+        if precision == "unknown":
+            precision = structured.date_precision
+        if start is None and end is None:
+            is_upcoming = structured.is_upcoming
+
+    dedupe_key = data.get("dedupe_key") or build_event_identity_key(
+        title=data["title"],
+        location=data["location"],
+        date_text=normalize_date_text(data["date"]),
+    )
+
+    data.update(
+        start_date=start,
+        end_date=end,
+        date_precision=precision,
+        is_upcoming=is_upcoming,
+        dedupe_key=dedupe_key,
+    )
+    return StoredEvent.model_validate(data)
+
+
+def _sort_events(items: list[StoredEvent]) -> list[StoredEvent]:
+    import functools
+
+    return sorted(items, key=functools.cmp_to_key(lambda a, b: compare_date_text(a.date, b.date)))
+
+
+async def get_events(*, pool: asyncpg.Pool | None = None) -> list[StoredEvent]:
+    rows = await _fetch("SELECT * FROM events", pool=pool)
+    return _sort_events([_row_to_event(r) for r in rows])
+
+
+async def get_visible_events(*, pool: asyncpg.Pool | None = None) -> list[StoredEvent]:
+    return await get_events(pool=pool)
+
+
+async def add_event(e: NewEvent, *, pool: asyncpg.Pool | None = None) -> StoredEvent:
+    structured = derive_structured_date(e.date)
+    dedupe_key = build_event_identity_key(
+        title=e.title, location=e.location, date_text=normalize_date_text(e.date)
+    )
+    row = await _fetchrow(
+        """
+        INSERT INTO events (
+          title, location, date, time, description, source_url,
+          start_date, end_date, date_precision, is_upcoming, dedupe_key
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        ON CONFLICT (dedupe_key) DO UPDATE
+        SET title = EXCLUDED.title,
+            location = EXCLUDED.location,
+            date = EXCLUDED.date,
+            time = EXCLUDED.time,
+            description = EXCLUDED.description,
+            source_url = EXCLUDED.source_url,
+            start_date = EXCLUDED.start_date,
+            end_date = EXCLUDED.end_date,
+            date_precision = EXCLUDED.date_precision,
+            is_upcoming = EXCLUDED.is_upcoming
+        RETURNING *
+        """,
+        e.title,
+        e.location,
+        e.date,
+        e.time,
+        e.description,
+        e.source_url,
+        _to_date(structured.start_date),
+        _to_date(structured.end_date),
+        structured.date_precision,
+        structured.is_upcoming,
+        dedupe_key,
+        pool=pool,
+    )
+    assert row is not None
+    return _row_to_event(row)
+
+
+async def update_event(
+    id: int, e: NewEvent, *, pool: asyncpg.Pool | None = None
+) -> StoredEvent:
+    structured = derive_structured_date(e.date)
+    dedupe_key = build_event_identity_key(
+        title=e.title, location=e.location, date_text=normalize_date_text(e.date)
+    )
+    row = await _fetchrow(
+        """
+        UPDATE events
+        SET title = $1,
+            location = $2,
+            date = $3,
+            time = $4,
+            description = $5,
+            source_url = $6,
+            start_date = $7,
+            end_date = $8,
+            date_precision = $9,
+            is_upcoming = $10,
+            dedupe_key = $11
+        WHERE id = $12
+        RETURNING *
+        """,
+        e.title,
+        e.location,
+        e.date,
+        e.time,
+        e.description,
+        e.source_url,
+        _to_date(structured.start_date),
+        _to_date(structured.end_date),
+        structured.date_precision,
+        structured.is_upcoming,
+        dedupe_key,
+        id,
+        pool=pool,
+    )
+    assert row is not None
+    return _row_to_event(row)
+
+
+async def get_event_by_dedupe_key(
+    dedupe_key: str, *, pool: asyncpg.Pool | None = None
+) -> StoredEvent | None:
+    row = await _fetchrow(
+        "SELECT * FROM events WHERE dedupe_key = $1 LIMIT 1", dedupe_key, pool=pool
+    )
+    return _row_to_event(row) if row else None
+
+
+async def get_event_by_id(
+    id: int, *, pool: asyncpg.Pool | None = None
+) -> StoredEvent | None:
+    row = await _fetchrow("SELECT * FROM events WHERE id = $1 LIMIT 1", id, pool=pool)
+    return _row_to_event(row) if row else None
+
+
+async def clear_events(*, pool: asyncpg.Pool | None = None) -> None:
+    await _execute("DELETE FROM events", pool=pool)
+
+
+async def delete_event(id: int, *, pool: asyncpg.Pool | None = None) -> None:
+    await _execute("DELETE FROM events WHERE id=$1", id, pool=pool)
+
+
 # ── Push subscriptions ─────────────────────────────────────────────────────────
 
 
@@ -451,7 +644,7 @@ async def get_latest_update_timestamp(
     return row["occurred_at"] if row else None
 
 
-UpdateType = Literal["restaurant"]
+UpdateType = Literal["restaurant", "event"]
 UpdateAction = Literal["added", "removed", "updated"]
 
 

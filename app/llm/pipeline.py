@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from app.llm.extract import LLMClient, extract_structured
 from app.llm.schemas import (
+    EVENT_EXTRACTION_PROMPT,
     RESTAURANT_EXTRACTION_PROMPT,
+    EventExtraction,
     RawArticle,
     RestaurantExtraction,
 )
-from app.storage import NewRestaurant
+from app.storage import NewEvent, NewRestaurant
 
 MAX_BATCH_CHARS = 12_000
 
@@ -74,4 +76,35 @@ async def extract_restaurants_from_articles(
                 )
             )
 
+    return results
+
+
+async def extract_events_from_articles(
+    client: LLMClient, articles: list[RawArticle]
+) -> list[NewEvent]:
+    if not articles:
+        return []
+
+    results: list[NewEvent] = []
+    for batch in _batch_articles(articles):
+        source_url = batch[0].url if len(batch) == 1 else None
+        extraction = await extract_structured(
+            client,
+            schema=EventExtraction,
+            prompt=EVENT_EXTRACTION_PROMPT,
+            text=_format_article_batch(batch),
+        )
+        if extraction is None:
+            continue
+        for e in extraction.events:
+            results.append(
+                NewEvent(
+                    title=e.title,
+                    location=e.location,
+                    date=e.date,
+                    time=e.time,
+                    description=e.description,
+                    source_url=source_url,
+                )
+            )
     return results

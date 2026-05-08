@@ -96,11 +96,15 @@ async def test_run_daily_refresh_works_without_workflows_runtime(monkeypatch) ->
         "app.sources.sfist.fetch_sfist_restaurants",
         "app.sources.michelin.fetch_michelin_restaurants",
         "app.sources.ddg_search.search_restaurants_ddg",
+        "app.sources.funcheap.fetch_funcheap_events",
+        "app.sources.famsf.fetch_famsf_events",
+        "app.sources.cal_academy.fetch_cal_academy_events",
+        "app.sources.ddg_search.search_events_ddg",
     ):
         monkeypatch.setattr(path, _empty)
 
     result = await refresh.run_daily_refresh()
-    assert result == {"restaurants": 0}
+    assert result == {"restaurants": 0, "events": 0}
 
 
 async def test_push_skipped_when_vapid_not_configured(

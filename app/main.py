@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import get_settings
 from app.db import close_pool
 from app.routes import (
+    api_events,
     api_health,
     api_push,
     api_restaurants,
@@ -53,6 +54,7 @@ def create_app() -> FastAPI:
     # API routers
     app.include_router(api_health.router)
     app.include_router(api_restaurants.router)
+    app.include_router(api_events.router)
     app.include_router(api_push.router)
     app.include_router(api_updates.router)
     app.include_router(api_rss.router)

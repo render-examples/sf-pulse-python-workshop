@@ -7,6 +7,12 @@
   // ── Tab switching (panels are sections; nav has data-tab) ────────────────────
   const tabs = document.querySelectorAll('[data-tab]')
   const panels = document.querySelectorAll('.panel')
+  const pageEl = document.querySelector('.page')
+
+  function syncTabClass(name) {
+    if (!pageEl) return
+    pageEl.classList.toggle('eventsActive', name === 'events')
+  }
 
   function showPanel(name) {
     for (const p of panels) {
@@ -17,11 +23,13 @@
     for (const t of tabs) {
       t.classList.toggle('tabActive', t.dataset.tab === name)
     }
+    syncTabClass(name)
+    if (name === 'events') prepareEventDescriptions()
   }
 
   function activatePanelFromHash() {
     const hash = (window.location.hash || '#restaurants').replace('#', '')
-    showPanel(['restaurants', 'diagram'].includes(hash) ? hash : 'restaurants')
+    showPanel(['restaurants', 'events', 'diagram'].includes(hash) ? hash : 'restaurants')
   }
 
   for (const t of tabs) {
@@ -35,6 +43,51 @@
   }
   window.addEventListener('hashchange', activatePanelFromHash)
   activatePanelFromHash()
+
+  // ── Event description expand/collapse ─────────────────────────────────────────
+  // Use double-rAF so layout has been computed AFTER the panel becomes visible:
+  // the outer rAF lets the browser paint, the inner rAF measures scrollHeight
+  // after layout. Batch reads then writes to avoid layout thrashing.
+  let eventDescPrepared = false
+  function prepareEventDescriptions() {
+    if (eventDescPrepared) return
+    const wrappers = document.querySelectorAll('.eventDescription')
+    if (!wrappers.length) {
+      eventDescPrepared = true
+      return
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const measurements = []
+        for (const wrap of wrappers) {
+          const inner = wrap.querySelector('.eventDescriptionText')
+          if (!inner) continue
+          const fullHeight = inner.scrollHeight
+          measurements.push({ wrap, inner, fullHeight })
+        }
+        for (const { wrap, fullHeight } of measurements) {
+          const collapsed = Math.min(fullHeight, 60)
+          wrap.style.setProperty('--event-description-collapsed-height', collapsed + 'px')
+          wrap.style.setProperty('--event-description-expanded-height', fullHeight + 'px')
+          wrap.dataset.clampReady = 'true'
+          if (fullHeight > collapsed + 4) {
+            wrap.dataset.expanded = 'false'
+            const btn = document.createElement('button')
+            btn.type = 'button'
+            btn.className = 'eventDescriptionToggle'
+            btn.textContent = 'Show more'
+            btn.addEventListener('click', () => {
+              const expanded = wrap.dataset.expanded === 'true'
+              wrap.dataset.expanded = expanded ? 'false' : 'true'
+              btn.textContent = expanded ? 'Show more' : 'Show less'
+            })
+            wrap.appendChild(btn)
+          }
+        }
+        eventDescPrepared = true
+      })
+    })
+  }
 
   // ── Diagram iframe auto-sizing ───────────────────────────────────────────────
   window.addEventListener('message', (event) => {
@@ -52,6 +105,7 @@
     if (typeof EventSource === 'undefined') return
     source = new EventSource('/api/events-stream')
     source.addEventListener('restaurants', (ev) => onCollectionUpdate('restaurants', ev))
+    source.addEventListener('events', (ev) => onCollectionUpdate('events', ev))
     source.addEventListener('error', () => {
       // Browser auto-reconnects; nothing to do.
     })

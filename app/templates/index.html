@@ -10,7 +10,7 @@
         <div class="logoMark">SF</div>
         <div>
           <div class="siteTitle">SF Pulse</div>
-          <div class="siteSubtitle">New restaurants in San Francisco</div>
+          <div class="siteSubtitle">New restaurants &amp; local events</div>
         </div>
       </div>
       <div class="headerActions">
@@ -41,6 +41,15 @@
             <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"></path>
           </svg>
           Restaurants ({{ restaurants|length }})
+        </a>
+        <a class="tab tabEvents" href="#events" data-tab="events">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          Events ({{ events|length }})
         </a>
         <a class="tab tabDiagram" href="#diagram" data-tab="diagram">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -85,6 +94,32 @@
             </tr>
             {% else %}
             <tr><td colspan="4" class="emptyCell">No restaurants yet — check back after the next refresh.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section id="events" class="panel eventsSection" hidden>
+        <table class="dataTable">
+          <thead>
+            <tr><th>Title</th><th>Neighborhood</th><th>Category</th><th>Time</th><th>Date</th></tr>
+          </thead>
+          <tbody data-table="events">
+            {% for e in events %}
+            <tr data-row-id="{{ e.id }}">
+              <td>
+                <div class="cellPrimary"><a class="detailLink" href="/events/{{ e.id }}">{{ e.title }}</a></div>
+                {% if e.location %}<div class="cellSub cellAddress">{{ e.location }}</div>{% endif %}
+                {% if e.description %}<div class="cellSub eventDescription"><span class="eventDescriptionText">{{ e.description }}</span></div>{% endif %}
+                {% if e.source_url %}<a href="{{ e.source_url }}" target="_blank" rel="noopener noreferrer" class="cellSource">Source</a>{% endif %}
+              </td>
+              <td><span class="badge">{{ derive_event_neighborhood(e) }}</span></td>
+              <td class="tableMuted">{{ format_event_category(derive_event_category(e)) }}</td>
+              <td class="tableMuted tableDate colTime">{{ e.time or "—" }}</td>
+              <td class="tableMuted tableDate">{{ e.date }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="emptyCell">No events yet — check back after the next refresh.</td></tr>
             {% endfor %}
           </tbody>
         </table>

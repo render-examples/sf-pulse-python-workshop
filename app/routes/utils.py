@@ -10,22 +10,27 @@ from fastapi import Header, HTTPException, status
 from app import storage
 from app.config import get_settings
 from app.security import secrets_equal
-from app.shared.types import InitialData, Restaurant
+from app.shared.types import InitialData, Restaurant, SFEvent
 
 
 @dataclass
 class InitialDataResult:
     restaurants: list[Restaurant]
+    events: list[SFEvent]
     last_updated: str | None
 
 
 async def get_initial_data() -> InitialData:
     restaurants_task = asyncio.create_task(storage.get_visible_restaurants())
+    events_task = asyncio.create_task(storage.get_visible_events())
     updates_task = asyncio.create_task(storage.get_recent_updates(1))
-    restaurants, updates = await asyncio.gather(restaurants_task, updates_task)
+    restaurants, events, updates = await asyncio.gather(
+        restaurants_task, events_task, updates_task
+    )
     last_updated = updates[0].occurred_at.isoformat() if updates else None
     return InitialData(
         restaurants=[Restaurant.model_validate(r.model_dump()) for r in restaurants],
+        events=[SFEvent.model_validate(e.model_dump()) for e in events],
         lastUpdated=last_updated,
     )
 

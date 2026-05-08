@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block head_extra %}
+<link rel="stylesheet" href="/static/styles/detail.css" />
+{% endblock %}
+{% block body %}
+<main class="detailPage">
+  <a class="detailBack" href="/#events">← Back to events</a>
+
+  <section class="detailHero">
+    <div class="detailEyebrow">Event detail</div>
+    <h1 class="detailTitle">{{ event.title }}</h1>
+    <p class="detailSummary">
+      SF Pulse event page with date, time, location, and nearby restaurants.
+    </p>
+
+    <div class="detailMetaGrid">
+      <div class="detailCard">
+        <div class="detailCardLabel">Category</div>
+        <div class="detailCardValue"><span class="badge">{{ category_label }}</span></div>
+      </div>
+      <div class="detailCard">
+        <div class="detailCardLabel">Neighborhood</div>
+        <div class="detailCardValue"><span class="badge">{{ neighborhood }}</span></div>
+      </div>
+      <div class="detailCard">
+        <div class="detailCardLabel">Date</div>
+        <div class="detailCardValue">{{ event.date }}</div>
+      </div>
+      {% if event.time %}
+      <div class="detailCard">
+        <div class="detailCardLabel">Time</div>
+        <div class="detailCardValue">{{ event.time }}</div>
+      </div>
+      {% endif %}
+      <div class="detailCard">
+        <div class="detailCardLabel">Location</div>
+        <div class="detailCardValue">{{ event.location }}</div>
+      </div>
+    </div>
+
+    {% if event.description %}
+    <p class="detailSummary">{{ event.description }}</p>
+    {% endif %}
+
+    {% if event.source_url or map_query %}
+    <div class="detailActions">
+      {% if event.source_url %}
+      <a class="detailAction" href="{{ event.source_url }}" target="_blank" rel="noopener noreferrer">View source</a>
+      {% endif %}
+      {% if map_query %}
+      <a class="detailAction" href="{{ map_query }}" target="_blank" rel="noopener noreferrer">Open map</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+
+  <div class="detailContent">
+    <section class="detailSection">
+      <h2 class="detailSectionTitle">Tracked metadata</h2>
+      <ul class="detailList">
+        <li class="detailListItem">
+          <span>Structured start date</span>
+          <span class="detailListMeta">{{ event.start_date or "Unknown" }}</span>
+        </li>
+        <li class="detailListItem">
+          <span>Structured end date</span>
+          <span class="detailListMeta">{{ event.end_date or "Unknown" }}</span>
+        </li>
+        <li class="detailListItem">
+          <span>Upcoming</span>
+          <span class="detailListMeta">{{ "Yes" if event.is_upcoming else "No" }}</span>
+        </li>
+        <li class="detailListItem">
+          <span>Date precision</span>
+          <span class="detailListMeta">{{ event.date_precision }}</span>
+        </li>
+        <li class="detailListItem">
+          <span>Dedupe key</span>
+          <span class="detailListMeta">{{ event.dedupe_key }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="detailSection">
+      <h2 class="detailSectionTitle">Related events</h2>
+      {% if related_events %}
+      <ul class="detailList">
+        {% for item in related_events %}
+        <li class="detailListItem">
+          <a href="/events/{{ item.id }}">{{ item.title }}</a>
+          <span class="detailListMeta">{{ item.date }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="detailListMeta">No related events in this neighborhood yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="detailSection">
+      <h2 class="detailSectionTitle">Nearby restaurants</h2>
+      {% if related_restaurants %}
+      <ul class="detailList">
+        {% for r in related_restaurants %}
+        <li class="detailListItem">
+          <a href="/restaurants/{{ r.id }}">{{ r.name }}</a>
+          <span class="detailListMeta">{{ r.neighborhood }} · {{ r.cuisine }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="detailListMeta">No nearby restaurants tracked in this neighborhood yet.</p>
+      {% endif %}
+    </section>
+  </div>
+</main>
+{% endblock %}

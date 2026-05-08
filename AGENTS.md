@@ -10,7 +10,7 @@ Guidance for AI agents (and humans) working in this codebase.
 
 ## What this is
 
-SF Pulse Python is a FastAPI port of the original TypeScript app at [`render-examples/sf-pulse-ts`](https://github.com/render-examples/sf-pulse-ts). It tracks SF restaurant openings. It uses:
+SF Pulse Python is a FastAPI port of the original TypeScript app at [`render-examples/sf-pulse-ts`](https://github.com/render-examples/sf-pulse-ts). It tracks SF restaurant openings and local events. It uses:
 
 - FastAPI + Jinja2 templates for HTML pages and JSON APIs
 - asyncpg + plain SQL migrations
@@ -61,7 +61,7 @@ SF Pulse Python is a FastAPI port of the original TypeScript app at [`render-exa
 
 ## Storage layer
 
-`app.storage` accepts an optional `pool` keyword argument on every function for test injection. ON CONFLICT upserts use `identity_key` (restaurants) to prevent duplicates.
+`app.storage` accepts an optional `pool` keyword argument on every function for test injection. ON CONFLICT upserts use `identity_key` (restaurants) and `dedupe_key` (events) to prevent duplicates.
 
 ## Migrations
 

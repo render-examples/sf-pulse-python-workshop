@@ -6,7 +6,7 @@ from typing import Any
 from render_sdk import Retry
 
 from app.refresh import apply_discovered_items as refresh_apply_discovered_items
-from app.storage import NewRestaurant
+from app.storage import NewEvent, NewRestaurant
 from workflow._app import app
 
 logger = logging.getLogger(__name__)
@@ -19,11 +19,19 @@ logger = logging.getLogger(__name__)
 )
 async def apply_discovered_items(
     restaurants: list[dict[str, Any]] | None = None,
+    events: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     restaurant_objs = [NewRestaurant(**r) for r in (restaurants or [])]
-    logger.info("[workflow] applying %d restaurants", len(restaurant_objs))
+    event_objs = [NewEvent(**e) for e in (events or [])]
+    logger.info(
+        "[workflow] applying %d restaurants, %d events",
+        len(restaurant_objs),
+        len(event_objs),
+    )
     try:
-        result = await refresh_apply_discovered_items(restaurants=restaurant_objs)
+        result = await refresh_apply_discovered_items(
+            restaurants=restaurant_objs, events=event_objs
+        )
     except Exception:
         logger.exception("[workflow] apply_discovered_items failed")
         raise
@@ -31,6 +39,8 @@ async def apply_discovered_items(
     payload = {
         "added_restaurants": list(result.added_restaurants),
         "updated_restaurants": list(result.updated_restaurants),
+        "added_events": list(result.added_events),
+        "updated_events": list(result.updated_events),
     }
     logger.info("[workflow] apply result: %s", payload)
     return payload
