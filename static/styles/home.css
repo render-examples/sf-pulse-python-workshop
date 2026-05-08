@@ -337,7 +337,7 @@
 }
 
 .page:has(.diagramSection:not([hidden])) .main {
-  max-width: 1400px;
+  max-width: 1500px;
   overflow: auto;
 }
 
