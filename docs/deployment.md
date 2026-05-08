@@ -17,7 +17,7 @@ What it does **not** provision:
 
 ### 1. Fork or clone the repo
 
-Push a copy of `render-examples/sf-pulse-python` to your own GitHub account if you want to make customizations. Otherwise the `Deploy to Render` button works directly against `render-examples/sf-pulse-python`.
+Push a copy of `render-examples/sf-pulse-python-workshop` to your own GitHub account if you want to make customizations. Otherwise the `Deploy to Render` button works directly against `render-examples/sf-pulse-python-workshop`.
 
 ### 2. Create the env group
 
@@ -35,7 +35,7 @@ Optional:
 
 ### 3. Deploy the Blueprint
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Frender-examples%2Fsf-pulse-python)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Frender-examples%2Fsf-pulse-python-workshop)
 
 Or `New` → `Blueprint` → connect the repo. Render reads `render.yaml` and creates the four services.
 
