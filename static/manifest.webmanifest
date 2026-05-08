@@ -1,7 +1,7 @@
 {
   "name": "SF Pulse",
   "short_name": "SF Pulse",
-  "description": "New SF restaurant openings and local events",
+  "description": "New SF restaurant openings",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#171614",

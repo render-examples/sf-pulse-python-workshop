@@ -1,7 +1,7 @@
 [project]
 name = "sf-pulse-python"
 version = "0.1.0"
-description = "SF restaurant openings and local events tracker (Python port of sf-pulse)"
+description = "SF restaurant openings tracker (Python port of sf-pulse)"
 requires-python = ">=3.12"
 readme = "README.md"
 license = { text = "MIT" }

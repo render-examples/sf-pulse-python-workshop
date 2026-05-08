@@ -26,7 +26,6 @@ def _to_rfc822(dt: datetime) -> str:
 async def rss_xml() -> Response:
     app_url = get_public_app_url()
     restaurants = await storage.get_restaurants()
-    events = await storage.get_events()
 
     items: list[dict] = []
     for r in restaurants:
@@ -43,17 +42,6 @@ async def rss_xml() -> Response:
                 "description": " · ".join(p for p in desc_parts if p),
                 "pubDate": _to_rfc822(r.added_at),
                 "guid": f"{app_url}/restaurants/{r.id}",
-            }
-        )
-    for e in events:
-        desc_parts = [e.location, e.date, e.time, e.description]
-        items.append(
-            {
-                "title": e.title,
-                "link": e.source_url or app_url,
-                "description": " · ".join(p for p in desc_parts if p),
-                "pubDate": _to_rfc822(e.added_at),
-                "guid": f"{app_url}/events/{e.id}",
             }
         )
 
@@ -77,7 +65,7 @@ async def rss_xml() -> Response:
   <channel>
     <title>SF Pulse</title>
     <link>{_xml_escape(app_url)}</link>
-    <description>New SF restaurant openings and Mission District events</description>
+    <description>New SF restaurant openings</description>
     <language>en-us</language>
     <atom:link href="{_xml_escape(app_url + "/api/rss.xml")}" rel="self" type="application/rss+xml" />
     <lastBuildDate>{_to_rfc822(datetime.now(UTC))}</lastBuildDate>
