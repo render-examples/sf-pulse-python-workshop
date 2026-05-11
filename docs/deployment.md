@@ -11,7 +11,7 @@ This walks through deploying SF Pulse Python to Render from scratch.
 
 What it does **not** provision:
 
-- `sf-pulse-python-workflow` — the workflow worker is created manually (see [workflow-setup.md](workflow-setup.md))
+- `sf-pulse-python-workflow` — the workflow service is created manually (see the workshop steps in the [README](../README.md#4-create-the-workflow-service))
 
 ## Step-by-step
 
@@ -48,9 +48,9 @@ After the first deploy, set on the env group:
 
 (`render.yaml` already wires these on the web service via `fromDatabase`/`fromService`, but the env group is shared with cron and workflow services that need the same URLs.)
 
-### 5. Create the workflow worker
+### 5. Create the workflow service
 
-Follow [workflow-setup.md](workflow-setup.md). Set `RENDER_API_KEY` and `SF_PULSE_WORKFLOW_SLUG` on the cron service.
+Follow steps 4 and 5 in the [workshop guide](../README.md#4-create-the-workflow-service). Then set `RENDER_API_KEY` and `SF_PULSE_WORKFLOW_SLUG` on the cron service.
 
 ### 6. First data load
 
@@ -79,7 +79,7 @@ Either wait for the daily 7:00 AM PDT cron, or **Trigger Run** the cron service 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | `DATABASE_URL is required` | env group missing the URL | Set it from the Postgres internal URL |
-| `Module not found: workflow.main` | Workflow worker can't find the package | Verify build command ran `uv sync --frozen` |
+| `Module not found: workflow.main` | Workflow service can't find the package | Verify build command ran `uv sync --frozen` |
 | `405 Method Not Allowed` on `/api/push/subscribe` | Probably hitting GET; should be POST | Check curl/client method |
 | Diagram tab empty | `static/diagram/` wasn't built | Verify the web service build log includes `npm run build` |
 | Push fanout silently skipped | VAPID keys not set | Set `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` on the env group |
