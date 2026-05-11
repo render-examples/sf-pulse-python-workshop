@@ -101,7 +101,7 @@ For full LLM extraction set `LLM_API_KEY`. For push notifications set `VAPID_PUB
 
 Two supported flows for running the app outside Render:
 
-- **Docker Compose** (preferred for the workshop): `docker compose up --build` brings up Postgres, Valkey, and the FastAPI app with migrations applied. The app is at <http://localhost:8000>. Postgres and Valkey are exposed on `localhost:5432` and `localhost:6379` so `render workflows dev` on the host can connect to them. See `compose.yaml` and `Dockerfile`.
+- **Docker Compose** (preferred for the workshop): `docker compose up --build` brings up Postgres, Valkey, and the FastAPI app with migrations applied. The app is at <http://localhost:8000>. Postgres and Valkey are exposed on `localhost:5432` and `localhost:6379` so `render workflows dev` on the host can connect to them. See `compose.yaml` and `docker/Dockerfile`. The Dockerfile lives under `docker/` (not the repo root) so Render's "New Workflow" flow doesn't auto-detect the workflow service as Docker — workflow attendees pick Python 3 explicitly.
 - **Native uv**: `uv sync && uv run python -m bin.migrate && uv run uvicorn app.main:app --reload`. Requires a local Postgres install.
 
 When implementing workshop changes, prefer the Docker Compose flow so the agent's setup matches the attendee's.

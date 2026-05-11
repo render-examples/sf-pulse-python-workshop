@@ -485,7 +485,9 @@ tests/                   # pytest suite (testcontainers Postgres)
 docs/                    # architecture, workflow setup, deployment
 render.yaml              # Render Blueprint
 compose.yaml             # Local Docker Compose: Postgres + Valkey + API
-Dockerfile               # Container build for the API
+docker/
+  Dockerfile             # Container build for the API (kept out of repo root so
+                         # Render's New Workflow flow doesn't auto-detect Docker)
 ```
 
 ### Environment variables
