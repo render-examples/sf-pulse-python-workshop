@@ -65,8 +65,14 @@ For a deeper walkthrough of why each component exists (why a workflow service, w
 Create your own public GitHub repo from this template. Use this repo for the rest of the workshop so Render and your local machine point at the same codebase.
 
 1. Click the green **Use this template** button in the top right of this repo, then choose **Create a new repository**.
+
+   ![GitHub repo header showing the Use this template dropdown with Create a new repository selected](docs/images/use-template.png)
+
 2. Name the repo `sf-pulse-python-workshop-<firstname-lastname>`.
-3. Set the repo visibility to Public. A public repo lets you add it to the workshop Render workspace without connecting your GitHub profile, which keeps setup fast during the session.
+3. Set the repo visibility to **Public**. A public repo lets you add it to the workshop Render workspace without connecting your GitHub profile, which keeps setup fast during the session.
+
+   ![GitHub Create a new repository form pre-filled from the template, with a personalized repo name and visibility set to Public](docs/images/template-config.png)
+
 4. Copy the repo URL.
 
 Using one repo for every step keeps the flow consistent:
@@ -85,10 +91,13 @@ Use the shared workspace for the hosted starter app. The shared workspace gives 
 
 1. If you don't have a Render account yet, [sign up for Render](https://dashboard.render.com/register). If you already have one, just [log in](https://dashboard.render.com/login).
 2. Submit the email address tied to your Render account through the [workshop workspace invite form](https://docs.google.com/forms/d/e/1FAIpQLSec77W4u00ZkENLOVzXSqPWvQ5lPQMCHCFLa4JOHn30l-Ad8Q/viewform). The email address must match your Render account so the invite reaches the right user.
-3. Check your inbox for the `AI Council` workspace invite from Render and accept it.
-4. In the Render Dashboard, accept the invite and switch to the `AI Council` workspace.
+3. Check your inbox for the `AI Council` workspace invite from Render and click **Join workspace**.
 
-![Switching to the AI Council workspace in the Render Dashboard sidebar](docs/images/workspace-switcher.png)
+   ![Render workspace invite email titled "You're invited to join AI Council" with a Join workspace button](docs/images/workspace-invite.png)
+
+4. In the Render Dashboard, click **Join workspace** on the in-app invite dialog. You'll land in the `AI Council` workspace automatically.
+
+   ![Render Dashboard invite dialog titled "Raph Terrier invited you to AI Council" with Join workspace and Dismiss invite buttons](docs/images/accept-invite.png)
 
 > [!TIP]
 > You can now create services in the `AI Council` workspace.
@@ -99,21 +108,45 @@ Deploy the Blueprint to create your Render project plus the hosted SF Pulse stac
 
 First, personalize the project name so your services are easy to find in the shared workspace.
 
-1. In your local clone of the repo, open `render.yaml`.
+1. In your workshop repo (either in your local clone, or directly in the GitHub web editor), open `render.yaml`.
 2. On line 2, change `name: sf-pulse-python` to `name: sf-pulse-<firstname-lastname>`.
+
+   ![GitHub web editor view of render.yaml with the project name on line 2 highlighted](docs/images/render-yaml-project-name-change.png)
+
 3. Commit and push the change to `main`.
 
 Now deploy it:
 
-1. Open the Blueprint deploy flow for your public workshop repo.
-2. Open the **Advanced** tab and confirm the `sf-pulse-env` env group from the `AI Council` workspace is attached. This group provides `RENDER_API_KEY`, `LLM_API_KEY`, and the other shared secrets, so you don't need to bring your own.
-3. Leave `SF_PULSE_WORKFLOW_SLUG` blank. You'll set it in step 5 once the workflow service exists.
-4. Click **Deploy Blueprint**.
+1. In the Render Dashboard, switch to the `AI Council` workspace and open the **Projects** page.
+2. Click **+ New** in the top right, then choose **Blueprint** from the dropdown.
 
-![Blueprint deploy form with the Advanced tab expanded showing the sf-pulse-env env group attachment](docs/images/blueprint-deploy-advanced.png)
+   ![AI Council Projects page with the + New dropdown open and Blueprint highlighted](docs/images/create-blueprint.png)
+
+3. In the **Public Git Repository** section at the bottom, paste your workshop repo URL and click **Continue**.
+
+   ![New Blueprint Instance form with a public GitHub repo URL filled into the Public Git Repository field](docs/images/blueprint-add-personal-repo.png)
+
+4. On the review page, leave **Blueprint Name**, **Branch** (`main`), and **Blueprint Path** at their defaults.
+5. Under **Specified configurations**, select **Create all as new services**. (See callout below — this is the most common miss.)
+6. Leave the `SF_PULSE_WORKFLOW_SLUG` value field blank. You'll set it in step 5 once the workflow service exists.
+
+   ![Blueprint review page showing Blueprint Name, Branch, and the Specified configurations radio options with the SF_PULSE_WORKFLOW_SLUG key/value field at the bottom](docs/images/give-blueprint-name.png)
+
+7. Click **Deploy Blueprint** at the bottom of the page.
+
+> [!IMPORTANT]
+> Make sure **Create all as new services** is selected, not **Associate existing services**. If you reuse another attendee's services by accident, your Blueprint will sync to their project and you won't see your own deploy.
+>
+> ![Specified configurations radio with Create all as new services selected](docs/images/IMPORTANT-toggle-this-to-NEW.png)
 
 > [!IMPORTANT]
 > **The cost estimate at the bottom is informational only.** The `AI Council` workspace is the workshop's shared workspace, so you won't be charged. The workspace is torn down after the conference.
+>
+> ![Blueprint pricing summary showing a monthly total to disregard](docs/images/service-prices-disregard.png)
+
+After clicking deploy, Render starts creating the project, the database, the Key Value instance, the web service, and the cron job. You'll land on the Blueprint sync page where you can watch each resource come up.
+
+![Blueprint sync page showing the project, database, Key Value, web service, and cron job being created](docs/images/services-being%20deployed.png)
 
 > [!TIP]
 > You now have a project named `sf-pulse-<firstname-lastname>` containing the web service, cron job, database, and Key Value instance. The cron job won't run successfully until you finish step 5.
@@ -122,27 +155,63 @@ Now deploy it:
 
 Create the workflow service inside the project the Blueprint just made. This service runs the durable task code in `workflow/main.py`. The cron job calls it later to start `daily-refresh`.
 
+Render Workflows isn't first-class in Blueprint YAML yet, so this one service is created from the Dashboard.
+
 1. In the Render Dashboard, open your `sf-pulse-<firstname-lastname>` project.
-2. From inside the project, click **New > Workflow**. Starting from inside the project pre-selects it for the new service.
+2. Click **+ New service** at the bottom of the project, then choose **Workflow** from the dropdown. Starting from inside the project pre-fills the Project field on the next page.
 
-   ![Clicking New > Workflow from inside the personalized project](docs/images/new-workflow-from-project.png)
+   ![Project page with the + New service dropdown open and Workflow highlighted](docs/images/new-workflow-button.png)
 
-3. Choose **Public Git Repository**.
-4. Use your public workshop repo URL.
-5. Set the branch to `main`.
-6. Set the name to `sf-pulse-workflow-<firstname-lastname>`.
-7. Confirm the **Project** field is set to `sf-pulse-<firstname-lastname>` and the environment matches your Blueprint's environment. If it isn't, fix it now. You don't want your workflow service in a different project.
+3. The New Workflow page is a two-step wizard: **Configure repo** then **Configure service**.
 
-   ![Workflow creation form with the Project field highlighted showing the personalized project](docs/images/workflow-project-field.png)
+   ![New Workflow wizard header showing Configure repo (1) and Configure service (2) tabs](docs/images/new-workflow-step1.png)
 
-8. Set the build command to `pip install --upgrade uv && uv sync --frozen`.
-9. Set the start command to `uv run python -m workflow.main`.
-10. Attach the `sf-pulse-env` env group. This is a shared env group pre-created in the `AI Council` workspace for the workshop. It holds the OpenAI API key (`LLM_API_KEY`) and other LLM settings so you don't need to bring your own key.
-11. Add `DATABASE_URL` as an env var on the service. Copy the value from the Internal Database URL of your Postgres database. Render Workflows doesn't yet support `fromDatabase` references in `render.yaml`, so you set this directly.
-12. Click **Deploy workflow**.
-13. After the service is live, open **Settings** and copy the workflow slug.
+4. On **Configure repo**, switch to the **Public Git Repository** tab.
+
+   ![Configure repo step with Git Provider and Public Git Repository tabs visible](docs/images/new-workflow-step2.png)
+
+5. Paste your public workshop repo URL and click **Connect**.
+
+   ![Public Git Repository tab with a workshop repo URL filled in and the Connect button highlighted](docs/images/new-workflow-step3.png)
+
+6. On **Configure service**, fill the form:
+   - **Name**: `sf-pulse-workflow-<firstname-lastname>`.
+   - **Project**: confirm it's set to your `sf-pulse-<firstname-lastname>` project and the environment matches your Blueprint's environment. If it isn't, fix it now — you don't want your workflow service in a different project.
+   - **Language**: Python 3.
+   - **Branch**: `main`.
+
+   ![Configure service form with Source Code, Name, Description, Project, Language, and Branch fields filled in](docs/images/workflow-config1.png)
+
+7. Set the **Build Command** to `pip install --upgrade uv && uv sync --frozen` and the **Start Command** to `uv run python -m workflow.main`.
+
+   ![Build Command and Start Command fields populated with the workshop's uv install and workflow.main entrypoint](docs/images/workflow-config2.png)
+
+8. Expand **Advanced** and link the `sf-pulse-env` env group. This shared env group lives in the `AI Council` workspace and provides the OpenAI key (`LLM_API_KEY`) and other LLM settings, so you don't need to bring your own.
+
+   ![Advanced section expanded with the sf-pulse-env env group linked under Linked Environment Groups](docs/images/workflow-config3.png)
+
+9. Click **Deploy workflow** at the bottom of the page.
+
+Now wire your database into the workflow service. Render Workflows doesn't yet support `fromDatabase` references, so you set this one env var manually — and missing this is the single most common workshop bug, so don't skip it:
+
+10. Once the workflow service is live, open its **Environment** tab.
+
+    ![Environment Variables panel on the workflow service with the Add variable button](docs/images/add-env-var.png)
+
+11. In another tab, open your `sf-pulse-python-db-<hash>` Postgres database, click **Connect** in the top right, and copy the **Internal Database URL**. Use the **Internal** tab — never paste the External URL into a Render service in the same region.
+
+    ![Postgres dashboard Connect dropdown showing the Internal Database URL on the Internal tab](docs/images/copy-db-internal-url-from-postgres-service.png)
+
+12. Back on the workflow service, click **+ Add variable**, set the Key to `DATABASE_URL`, paste the Internal URL into Value, and choose **Save, rebuild, and register** so the workflow service redeploys with the new value.
+
+    ![DATABASE_URL key and value form on the workflow service with the Save, rebuild, and register option highlighted](docs/images/add-db-url-in-corkflow-env-var.png)
+
+13. After the service is live, open **Settings** and copy the workflow slug. You'll paste it into the cron job in step 5.
 
     ![Workflow service Settings tab with the slug highlighted](docs/images/workflow-slug-settings.png)
+
+> [!IMPORTANT]
+> Without `DATABASE_URL` on the workflow service, the workflow runs against an empty in-memory Postgres connection (or fails to connect at all) and your web service never sees the data the workflow discovers. If after step 6 you're seeing "the workflow ran but my DB is empty," this is almost always why.
 
 > [!TIP]
 > You now have a live workflow service inside your project, plus its slug ready to wire to the cron job.
@@ -154,8 +223,9 @@ The cron job needs the workflow slug to know which task to trigger.
 1. In your project, open the `sf-pulse-python-daily` cron service.
 2. Add `SF_PULSE_WORKFLOW_SLUG` as an env var, set to the slug you copied in step 4.
 3. Save. The cron service redeploys automatically.
+4. Once the redeploy finishes, click **Trigger Run** to confirm it actually fires the workflow.
 
-![Cron service Environment tab with SF_PULSE_WORKFLOW_SLUG being added](docs/images/cron-env-var.png)
+![Cron service Environment tab with the SF_PULSE_WORKFLOW_SLUG key and an empty Value field ready to receive the workflow slug](docs/images/workflow-slug-var.png)
 
 > [!TIP]
 > Your cron job can now trigger `daily-refresh` on your workflow service.
