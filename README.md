@@ -127,12 +127,12 @@ Now deploy it:
    ![New Blueprint Instance form with a public GitHub repo URL filled into the Public Git Repository field](docs/images/blueprint-add-personal-repo.png)
 
 4. On the review page, leave **Blueprint Name**, **Branch** (`main`), and **Blueprint Path** at their defaults.
-5. Under **Specified configurations**, select **Create all as new services**. (See callout below — this is the most common miss.)
+5. Under **Specified configurations**, select **Create all as new services** (see callout below — this is the most common miss).
 6. Leave the `SF_PULSE_WORKFLOW_SLUG` value field blank. You'll set it in step 5 once the workflow service exists.
 
    ![Blueprint review page showing Blueprint Name, Branch, and the Specified configurations radio options with the SF_PULSE_WORKFLOW_SLUG key/value field at the bottom](docs/images/give-blueprint-name.png)
 
-7. Click **Deploy Blueprint** at the bottom of the page.
+Before you hit deploy, double-check these two things on the page:
 
 > [!IMPORTANT]
 > Make sure **Create all as new services** is selected, not **Associate existing services**. If you reuse another attendee's services by accident, your Blueprint will sync to their project and you won't see your own deploy.
@@ -140,11 +140,11 @@ Now deploy it:
 > ![Specified configurations radio with Create all as new services selected](docs/images/IMPORTANT-toggle-this-to-NEW.png)
 
 > [!IMPORTANT]
-> **The cost estimate at the bottom is informational only.** The `AI Council` workspace is the workshop's shared workspace, so you won't be charged. The workspace is torn down after the conference.
+> Just before the **Deploy Blueprint** button you'll see a cost estimate at the bottom of the page. **Treat it as informational only.** The `AI Council` workspace is the workshop's shared workspace, so you won't be charged. The workspace is torn down after the conference.
 >
 > ![Blueprint pricing summary showing a monthly total to disregard](docs/images/service-prices-disregard.png)
 
-After clicking deploy, Render starts creating the project, the database, the Key Value instance, the web service, and the cron job. You'll land on the Blueprint sync page where you can watch each resource come up.
+Now click **Deploy Blueprint** at the bottom of the page. Render starts creating the project, the database, the Key Value instance, the web service, and the cron job. You'll land on the Blueprint sync page where you can watch each resource come up.
 
 ![Blueprint sync page showing the project, database, Key Value, web service, and cron job being created](docs/images/services-being%20deployed.png)
 
@@ -208,7 +208,7 @@ Now wire your database into the workflow service. Render Workflows doesn't yet s
 
 13. After the service is live, open **Settings** and copy the workflow slug. You'll paste it into the cron job in step 5.
 
-    ![Workflow service Settings tab with the slug highlighted](docs/images/workflow-slug-settings.png)
+    ![Workflow service Settings tab with the slug highlighted](docs/images/copy-workflow-slug.png)
 
 > [!IMPORTANT]
 > Without `DATABASE_URL` on the workflow service, the workflow runs against an empty in-memory Postgres connection (or fails to connect at all) and your web service never sees the data the workflow discovers. If after step 6 you're seeing "the workflow ran but my DB is empty," this is almost always why.
