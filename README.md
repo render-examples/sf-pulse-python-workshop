@@ -58,28 +58,6 @@ For a deeper walkthrough of why each component exists (why a workflow service, w
 - How to use Postgres as the source of truth for discovered data
 - How to run and inspect workflow tasks locally before deploying
 
-## Workshop checklist
-
-Track your progress through the workshop. Each item links to its full instructions below.
-
-**Deploy the starter app**
-
-- [ ] [1. Create your workshop repo](#1-create-your-workshop-repo)
-- [ ] [2. Join the shared Render workspace](#2-join-the-shared-render-workspace)
-- [ ] [3. Deploy the Blueprint](#3-deploy-the-blueprint)
-- [ ] [4. Create the workflow service](#4-create-the-workflow-service)
-- [ ] [5. Wire the cron job to the workflow](#5-wire-the-cron-job-to-the-workflow)
-- [ ] [6. Verify the hosted starter app](#6-verify-the-hosted-starter-app)
-
-**Extend the pipeline**
-
-- [ ] [7. Switch to local development](#7-switch-to-local-development)
-- [ ] [8. Ask your coding agent to add events (local only)](#8-ask-your-coding-agent-to-add-events-local-only)
-- [ ] [9. Understand the new workflow tasks](#9-understand-the-new-workflow-tasks)
-- [ ] [10. Run the workflow locally](#10-run-the-workflow-locally)
-- [ ] [11. Check the local app](#11-check-the-local-app)
-- [ ] [12. Push and redeploy](#12-push-and-redeploy)
-
 ## Workshop steps
 
 ### 1. Create your workshop repo
