@@ -8,7 +8,12 @@ By the end of the workshop, you'll have shipped a durable agent: not a one-off p
 
 You'll work with SF Pulse, a FastAPI app whose agent behavior is a durable Render Workflows pipeline. Today the pipeline runs a daily refresh task that discovers new SF restaurant openings, normalizes candidates, deduplicates them, and writes the results to Render Postgres.
 
-You'll extend that pipeline rather than write a one-off script. Adding an Events feature is the concrete exercise: new source tasks, a broader orchestrator, the same deduplication and persistence path. By the end, `daily-refresh` should fan out across both restaurant and event sources, and the web app should show an Events tab backed by data from your database.
+The workshop arc has two halves:
+
+1. **Deploy the starter app** to the shared `AI Council` Render workspace and verify it works, so you can see the production shape of the app before you change any code.
+2. **Extend the pipeline** locally with an Events feature, validate it against your local Postgres, then push and let your hosted services pick up the change.
+
+Adding an Events feature is the concrete exercise: new source tasks, a broader orchestrator, the same deduplication and persistence path. By the end, `daily-refresh` should fan out across both restaurant and event sources, and the web app should show an Events tab backed by data from your database.
 
 ### Architecture
 
@@ -71,20 +76,19 @@ Using one repo for every step keeps the flow consistent:
 - Your AI coding tool edits your repo.
 - Your pushed changes redeploy on Render.
 
-> [!IMPORTANT]
-> **Fallback only.** If you can't create a GitHub repo during the workshop, you can point Render at the public `render-examples/sf-pulse-python-workshop` repo for the initial deploy. You won't be able to push your Events feature to that repo or redeploy your changes from it later, so use this only if creating your own repo is blocked.
-
 > [!TIP]
 > **Result:** You have a public GitHub repo URL for Render services, local development, and later pushes.
 
 ### 2. Join the shared Render workspace
 
-Use the shared workspace for the hosted baseline app. The shared workspace gives you workshop infrastructure without requiring you to add payment details or manage credits during the session.
+Use the shared workspace for the hosted starter app. The shared workspace gives you workshop infrastructure without requiring you to add payment details or manage credits during the session.
 
 1. Sign up for Render.
 2. Submit your email through the workspace invite form.
 3. Accept the invite to the `AI Council` workspace.
 4. In the Render Dashboard, switch to the `AI Council` workspace.
+
+![Switching to the AI Council workspace in the Render Dashboard sidebar](docs/images/workspace-switcher.png)
 
 > [!TIP]
 > **Result:** You can create services in the `AI Council` workspace.
@@ -102,9 +106,14 @@ First, personalize the project name so your services are easy to find in the sha
 Now deploy it:
 
 1. Open the Blueprint deploy flow for your public workshop repo.
-2. Confirm `RENDER_API_KEY` is a real Render API key. Create one under **Account Settings > API Keys** if you don't have one yet.
+2. Open the **Advanced** tab and confirm the `sf-pulse-env` env group from the `AI Council` workspace is attached. This group provides `RENDER_API_KEY`, `LLM_API_KEY`, and the other shared secrets, so you don't need to bring your own.
 3. Leave `SF_PULSE_WORKFLOW_SLUG` blank. You'll set it in step 5 once the workflow service exists.
 4. Click **Deploy Blueprint**.
+
+![Blueprint deploy form with the Advanced tab expanded showing the sf-pulse-env env group attachment](docs/images/blueprint-deploy-advanced.png)
+
+> [!IMPORTANT]
+> **The cost estimate at the bottom is informational only.** The `AI Council` workspace is the workshop's shared workspace, so you won't be charged. The workspace is torn down after the conference.
 
 > [!TIP]
 > **Result:** You have a project named `sf-pulse-<firstname-lastname>` containing the web service, cron job, database, and Key Value instance. The cron job won't run successfully until you finish step 5.
@@ -115,17 +124,25 @@ Create the workflow service inside the project the Blueprint just made. This ser
 
 1. In the Render Dashboard, open your `sf-pulse-<firstname-lastname>` project.
 2. From inside the project, click **New > Workflow**. Starting from inside the project pre-selects it for the new service.
+
+   ![Clicking New > Workflow from inside the personalized project](docs/images/new-workflow-from-project.png)
+
 3. Choose **Public Git Repository**.
 4. Use your public workshop repo URL.
 5. Set the branch to `main`.
 6. Set the name to `sf-pulse-workflow-<firstname-lastname>`.
 7. Confirm the **Project** field is set to `sf-pulse-<firstname-lastname>` and the environment matches your Blueprint's environment. If it isn't, fix it now. You don't want your workflow service in a different project.
+
+   ![Workflow creation form with the Project field highlighted showing the personalized project](docs/images/workflow-project-field.png)
+
 8. Set the build command to `pip install --upgrade uv && uv sync --frozen`.
 9. Set the start command to `uv run python -m workflow.main`.
 10. Attach the `sf-pulse-env` env group. This is a shared env group pre-created in the `AI Council` workspace for the workshop. It holds the OpenAI API key (`LLM_API_KEY`) and other LLM settings so you don't need to bring your own key.
 11. Add `DATABASE_URL` as an env var on the service. Copy the value from the Internal Database URL of your Postgres database. Render Workflows doesn't yet support `fromDatabase` references in `render.yaml`, so you set this directly.
 12. Click **Deploy workflow**.
 13. After the service is live, open **Settings** and copy the workflow slug.
+
+    ![Workflow service Settings tab with the slug highlighted](docs/images/workflow-slug-settings.png)
 
 > [!TIP]
 > **Result:** You have a live workflow service inside your project, plus its slug ready to wire to the cron job.
@@ -138,16 +155,24 @@ The cron job needs the workflow slug to know which task to trigger.
 2. Add `SF_PULSE_WORKFLOW_SLUG` as an env var, set to the slug you copied in step 4.
 3. Save. The cron service redeploys automatically.
 
+![Cron service Environment tab with SF_PULSE_WORKFLOW_SLUG being added](docs/images/cron-env-var.png)
+
 > [!TIP]
 > **Result:** The cron job can now trigger `daily-refresh` on your workflow service.
 
-### 6. Verify the hosted baseline
+### 6. Verify the hosted starter app
 
 Confirm the initial app works before you start the local exercise. Verifying the known-good version first helps you tell the difference between setup issues and later implementation issues.
 
 1. In your `sf-pulse-<firstname-lastname>` project, open the `sf-pulse-python` web service. Its URL is at the top of the service page and looks like `https://sf-pulse-python-<hash>.onrender.com`. Open it in a new tab to see the SF Pulse home page.
+
+   ![Web service page with the public onrender.com URL highlighted at the top](docs/images/web-service-url.png)
+
 2. Back in the Dashboard, open the `sf-pulse-python-daily` cron job and click **Trigger Run**.
-3. Open the workflow service and watch the **Logs** tab — `daily-refresh` should fan out across the source tasks, run extraction, and call `apply-discovered-items`.
+3. Open the workflow service and watch the **Logs** tab. `daily-refresh` should fan out across the source tasks, run extraction, and call `apply-discovered-items`.
+
+   ![Workflow service Logs tab during a daily-refresh run](docs/images/workflow-logs.png)
+
 4. Refresh the web service URL. Restaurant cards should appear on the home page.
 
 > [!TIP]
@@ -155,7 +180,7 @@ Confirm the initial app works before you start the local exercise. Verifying the
 
 ### 7. Switch to local development
 
-Move to your local machine. This is where your AI coding tool edits the app and workflow code. The Render skills help your tool understand the deployed services, but the first validation happens locally.
+Switch from the Render Dashboard to your terminal and editor. This is where your AI coding tool edits the app and workflow code. The Render skills help your tool understand the deployed services, but the first validation happens locally.
 
 Install the Render CLI and skills (used in step 10 to run the workflow runtime locally):
 
