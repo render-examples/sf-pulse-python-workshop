@@ -120,19 +120,24 @@ render.yaml              # Render Blueprint
 ## Local development
 
 ```sh
-# 1. Install Python deps
+# 1. Install and start PostgreSQL, then create the database
+brew install postgresql@16
+brew services start postgresql@16
+createdb sfpulse
+
+# 2. Install Python deps
 uv sync
 
-# 2. Build the React diagram (one-time; rebuild on changes)
+# 3. Build the React diagram (one-time; rebuild on changes)
 cd web/diagram && npm ci && npm run build && cd ../..
 
-# 3. Configure environment
+# 4. Configure environment
 cp .env.example .env.local   # fill in DATABASE_URL, optional LLM_API_KEY, optional VAPID_*
 
-# 4. Run migrations
+# 5. Run migrations
 uv run python -m bin.migrate
 
-# 5. Start the dev server
+# 6. Start the dev server
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
