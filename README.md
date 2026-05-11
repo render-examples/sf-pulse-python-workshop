@@ -168,8 +168,6 @@ Render Workflows isn't first-class in Blueprint YAML yet, so this one service is
 
 4. On **Configure repo**, switch to the **Public Git Repository** tab.
 
-   ![Configure repo step with Git Provider and Public Git Repository tabs visible](docs/images/new-workflow-step2.png)
-
 5. Paste your public workshop repo URL and click **Connect**.
 
    ![Public Git Repository tab with a workshop repo URL filled in and the Connect button highlighted](docs/images/new-workflow-step3.png)
