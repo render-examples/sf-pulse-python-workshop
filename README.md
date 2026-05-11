@@ -256,7 +256,7 @@ render skills list
 > Wire your AI coding tool to Render so the agent can list services, query your database, and read logs directly during steps 8–12. Without it, the agent flies blind when something on Render misbehaves (like the workflow writing to the wrong database).
 >
 > - **Cursor users**: install the [Render plugin for Cursor](https://cursor.com/marketplace/render). It bundles the Render skills, MCP config, hooks, and rules in one step.
-> - **Any other AI tool** (Codex, Claude Code, Windsurf, Claude Desktop, VS Code, ...): set up the [Render MCP server](https://render.com/docs/mcp-server). The page has copy-paste config for each tool.
+> - **Any other AI tool** (Codex, Claude Code, Windsurf, Claude Desktop, VS Code, ...): set up the [Render MCP server](https://render.com/docs/mcp-server). The page has copy-paste config for each tool. This section is optional. You will need your personal Render [API key](https://render.com/docs/mcp-server#1-create-an-api-key) for it to work.
 
 Clone your public workshop repo:
 
