@@ -235,14 +235,8 @@ The cron job needs the workflow slug to know which task to trigger.
 Confirm the initial app works before you start the local exercise. Verifying the known-good version first helps you tell the difference between setup issues and later implementation issues.
 
 1. In your `sf-pulse-<firstname-lastname>` project, open the `sf-pulse-python` web service. Its URL is at the top of the service page and looks like `https://sf-pulse-python-<hash>.onrender.com`. Open it in a new tab to see the SF Pulse home page.
-
-   ![Web service page with the public onrender.com URL highlighted at the top](docs/images/web-service-url.png)
-
 2. Back in the Dashboard, open the `sf-pulse-python-daily` cron job and click **Trigger Run**.
 3. Open the workflow service and watch the **Logs** tab. `daily-refresh` should fan out across the source tasks, run extraction, and call `apply-discovered-items`.
-
-   ![Workflow service Logs tab during a daily-refresh run](docs/images/workflow-logs.png)
-
 4. Refresh the web service URL. Restaurant cards should appear on the home page.
 
 > [!TIP]
