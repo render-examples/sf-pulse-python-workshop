@@ -89,7 +89,7 @@ Using one repo for every step keeps the flow consistent:
 
 Use the shared workspace for the hosted starter app. The shared workspace gives you workshop infrastructure without requiring you to add payment details or manage credits during the session.
 
-1. If you don't have a Render account yet, [sign up for Render]([https://dashboard.render.com/register](https://dashboard.render.com/register?utm_source=ai_council_2026&utm_medium=events). If you already have one, just [log in](https://dashboard.render.com/login).
+1. If you don't have a Render account yet, [sign up for Render](https://dashboard.render.com/register?utm_source=ai_council_2026&utm_medium=events). If you already have one, just [log in](https://dashboard.render.com/login).
 2. Submit the email address tied to your Render account through the [workshop workspace invite form](https://docs.google.com/forms/d/e/1FAIpQLSec77W4u00ZkENLOVzXSqPWvQ5lPQMCHCFLa4JOHn30l-Ad8Q/viewform). The email address must match your Render account so the invite reaches the right user.
 3. Check your inbox for the `AI Council` workspace invite from Render and click **Join workspace**.
 
