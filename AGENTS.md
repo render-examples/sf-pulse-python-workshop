@@ -27,7 +27,7 @@ SF Pulse Python is a FastAPI port of the original TypeScript app at [`render-exa
 - Streams realtime updates via SSE (Redis pub/sub when `REDIS_URL` is set; in-process fallback otherwise)
 - Sends web push notifications via pywebpush
 
-**Workflow worker** (`python -m workflow.main`):
+**Workflow service** (`python -m workflow.main`):
 - Registers tasks via `@app.task` decorators on the `Workflows()` instance defined in `workflow/_app.py`
 - The `daily_refresh` orchestrator fans out to source-fetch tasks via `asyncio.gather`, runs LLM extraction conditionally, dedupes, and calls `apply_discovered_items`
 - Each source task is a thin wrapper around an `app.sources.*` function
@@ -83,7 +83,7 @@ When adding or changing features, update:
 - `README.md` — user-facing setup, API surface, env vars
 - `AGENTS.md` — architecture, conventions
 - `docs/architecture.md` — for non-trivial structural changes
-- `docs/workflow-setup.md` and `docs/deployment.md` — for deploy-related changes
+- `docs/deployment.md` — for deploy-related changes
 
 ## Environment
 
