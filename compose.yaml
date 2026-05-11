@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sfpulse
+      POSTGRES_PASSWORD: sfpulse
+      POSTGRES_DB: sfpulse
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sfpulse -d sfpulse"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  kv:
+    image: valkey/valkey:8-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+    depends_on:
+      db:
+        condition: service_healthy
+      kv:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://sfpulse:sfpulse@db:5432/sfpulse
+      REDIS_URL: redis://kv:6379
+      APP_URL: http://localhost:8000
+      HOST: 0.0.0.0
+      PORT: "8000"
+    env_file:
+      - path: .env.local
+        required: false
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./workflow:/app/workflow
+      - ./bin:/app/bin
+      - ./migrations:/app/migrations
+      - ./static:/app/static
+    command: >
+      sh -c "uv run python -m bin.migrate &&
+             uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+
+volumes:
+  db-data:

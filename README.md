@@ -10,6 +10,41 @@ You'll work with SF Pulse, a FastAPI app whose agent behavior is a durable Rende
 
 You'll extend that pipeline rather than write a one-off script. Adding an Events feature is the concrete exercise: new source tasks, a broader orchestrator, the same deduplication and persistence path. By the end, `daily-refresh` should fan out across both restaurant and event sources, and the web app should show an Events tab backed by data from your database.
 
+### Architecture
+
+```mermaid
+flowchart LR
+    user([Browser])
+
+    subgraph project["Your Render project"]
+        direction TB
+        web["Web service<br/>FastAPI + SSE"]
+        cron["Cron job<br/>daily trigger"]
+        wf["Workflow service<br/>daily-refresh"]
+        db[("Render Postgres")]
+        kv[("Render Key Value")]
+    end
+
+    sources(["Source sites<br/>Eater, SFist, Funcheap, ..."])
+    llm(["LLM API<br/>OpenAI / Anthropic"])
+
+    user -->|HTTP + SSE| web
+    web --> db
+    web <--> kv
+
+    cron -->|trigger| wf
+    wf -->|scrape| sources
+    wf -->|extract| llm
+    wf -->|upsert| db
+    wf -->|publish update| kv
+```
+
+The cron job triggers `daily-refresh` on the workflow service. The workflow fans out across source tasks (scraping and LLM extraction), deduplicates the results, upserts them into Postgres, and publishes a realtime update to Key Value. The web service reads from Postgres for page loads and subscribes to Key Value for SSE so the UI updates without a refresh.
+
+The workshop has you extend this pipeline with new source tasks for SF events.
+
+For a deeper walkthrough of why each component exists (why a workflow service, why Key Value, why Postgres) and a sequence diagram of the daily-refresh flow, see [docs/architecture.md](docs/architecture.md).
+
 ## What you'll learn
 
 - How to split an agent workflow into retryable tasks
@@ -24,7 +59,7 @@ You'll extend that pipeline rather than write a one-off script. Adding an Events
 
 Create your own public GitHub repo from this template. Use this repo for the rest of the workshop so Render and your local machine point at the same codebase.
 
-1. Click **Use this template** at the top of this repo.
+1. Click the green **Use this template** button in the top right of this repo, then choose **Create a new repository**.
 2. Name the repo `sf-pulse-python-workshop-<firstname-lastname>`.
 3. Set the repo visibility to Public. A public repo lets you add it to the workshop Render workspace without connecting your GitHub profile, which keeps setup fast during the session.
 4. Copy the repo URL.
@@ -39,7 +74,7 @@ Using one repo for every step keeps the flow consistent:
 > [!IMPORTANT]
 > **Fallback only.** If you can't create a GitHub repo during the workshop, you can point Render at the public `render-examples/sf-pulse-python-workshop` repo for the initial deploy. You won't be able to push your Events feature to that repo or redeploy your changes from it later, so use this only if creating your own repo is blocked.
 
-> [!NOTE]
+> [!TIP]
 > **Result:** You have a public GitHub repo URL for Render services, local development, and later pushes.
 
 ### 2. Join the shared Render workspace
@@ -51,7 +86,7 @@ Use the shared workspace for the hosted baseline app. The shared workspace gives
 3. Accept the invite to the `AI Council` workspace.
 4. In the Render Dashboard, switch to the `AI Council` workspace.
 
-> [!NOTE]
+> [!TIP]
 > **Result:** You can create services in the `AI Council` workspace.
 
 ### 3. Deploy the Blueprint
@@ -71,7 +106,7 @@ Now deploy it:
 3. Leave `SF_PULSE_WORKFLOW_SLUG` blank. You'll set it in step 5 once the workflow service exists.
 4. Click **Deploy Blueprint**.
 
-> [!NOTE]
+> [!TIP]
 > **Result:** You have a project named `sf-pulse-<firstname-lastname>` containing the web service, cron job, database, and Key Value instance. The cron job won't run successfully until you finish step 5.
 
 ### 4. Create the workflow service
@@ -92,7 +127,7 @@ Create the workflow service inside the project the Blueprint just made. This ser
 12. Click **Deploy workflow**.
 13. After the service is live, open **Settings** and copy the workflow slug.
 
-> [!NOTE]
+> [!TIP]
 > **Result:** You have a live workflow service inside your project, plus its slug ready to wire to the cron job.
 
 ### 5. Wire the cron job to the workflow
@@ -103,24 +138,26 @@ The cron job needs the workflow slug to know which task to trigger.
 2. Add `SF_PULSE_WORKFLOW_SLUG` as an env var, set to the slug you copied in step 4.
 3. Save. The cron service redeploys automatically.
 
-> [!NOTE]
+> [!TIP]
 > **Result:** The cron job can now trigger `daily-refresh` on your workflow service.
 
 ### 6. Verify the hosted baseline
 
 Confirm the initial app works before you start the local exercise. Verifying the known-good version first helps you tell the difference between setup issues and later implementation issues.
 
-1. Open the web service URL.
-2. Trigger the cron job manually from the Render Dashboard.
-3. Open the workflow service logs.
-4. Confirm that `daily-refresh` runs and restaurant data appears in the web app.
+1. In your `sf-pulse-<firstname-lastname>` project, open the `sf-pulse-python` web service. Its URL is at the top of the service page and looks like `https://sf-pulse-python-<hash>.onrender.com`. Open it in a new tab to see the SF Pulse home page.
+2. Back in the Dashboard, open the `sf-pulse-python-daily` cron job and click **Trigger Run**.
+3. Open the workflow service and watch the **Logs** tab — `daily-refresh` should fan out across the source tasks, run extraction, and call `apply-discovered-items`.
+4. Refresh the web service URL. Restaurant cards should appear on the home page.
 
-> [!NOTE]
+> [!TIP]
 > **Result:** The hosted app renders, `daily-refresh` runs, and restaurant data appears in the web app.
 
 ### 7. Switch to local development
 
 Move to your local machine. This is where your AI coding tool edits the app and workflow code. The Render skills help your tool understand the deployed services, but the first validation happens locally.
+
+Install the Render CLI and skills (used in step 10 to run the workflow runtime locally):
 
 ```sh
 brew install render
@@ -133,19 +170,49 @@ Clone your public workshop repo:
 ```sh
 git clone <your-workshop-repo-url>
 cd sf-pulse-python-workshop-<firstname-lastname>
-uv sync
 ```
 
-Configure local Postgres, then run migrations:
+Now pick one of the two local setups below.
+
+#### Option A: Docker Compose (recommended)
+
+If you have Docker Desktop, this is the fastest path. One command brings up Postgres, Valkey (Render Key Value's engine), and the FastAPI app with migrations applied.
+
+```sh
+docker compose up --build
+```
+
+Once the logs settle, the app is accessible at:
+
+- **App UI:** <http://localhost:8000>
+- **Postgres:** `localhost:5432` (user `sfpulse`, password `sfpulse`, database `sfpulse`)
+- **Valkey:** `localhost:6379`
+
+Postgres and Valkey are exposed on the host so `render workflows dev` in step 10 can connect to them from outside the compose network.
+
+For step 10, set `DATABASE_URL` and `REDIS_URL` in `.env.local` so the host-side workflow runtime can reach the dockerized services:
 
 ```sh
 cp .env.example .env.local
+# Edit .env.local and set:
+# DATABASE_URL=postgresql://sfpulse:sfpulse@localhost:5432/sfpulse
+# REDIS_URL=redis://localhost:6379
+```
+
+#### Option B: Native uv (no Docker)
+
+If you'd rather run everything on your host:
+
+```sh
+uv sync
+cp .env.example .env.local
+# Set DATABASE_URL in .env.local to point at your local Postgres
 uv run python -m bin.migrate
 ```
 
-Set `DATABASE_URL` in `.env.local` before running migrations.
+You'll need PostgreSQL 16 installed locally (`brew install postgresql@16` on macOS). Valkey or Redis is optional; without it, SSE falls back to in-process.
 
-> [!NOTE]
+> [!TIP]
 > **Result:** You have the repo cloned, dependencies installed, the local environment configured, and database migrations applied.
 
 ### 8. Ask your coding agent to add events (local only)
@@ -166,7 +233,7 @@ Scope:
   the `daily-refresh` task so I can see events in my local database.
 ```
 
-> [!NOTE]
+> [!TIP]
 > **Result:** Your local code includes an Events feature and new workflow tasks, but nothing has been deployed yet.
 
 ### 9. Understand the new workflow tasks
@@ -186,7 +253,7 @@ The local code change should extend the workflow with these tasks:
 
 The important pattern is fan-out and fan-in. Each source is isolated and retryable. The orchestrator tolerates failures from individual sources, then applies the candidates that succeeded.
 
-> [!NOTE]
+> [!TIP]
 > **Result:** You can explain which tasks fetch event data, which task orchestrates the run, and which task writes results to Postgres.
 
 ### 10. Run the workflow locally
@@ -211,12 +278,16 @@ Run `daily-refresh` with this input:
 
 Watch the logs. You should see the workflow fetch restaurant sources, fetch event sources, optionally run LLM extraction, deduplicate candidates, and call `apply-discovered-items`.
 
-> [!NOTE]
+> [!TIP]
 > **Result:** A local `daily-refresh` run fetches restaurants and events, deduplicates candidates, and writes records to your local Postgres database.
 
 ### 11. Check the local app
 
-Start the FastAPI app. The workflow proves the backend pipeline works. The local web app proves the new event data is visible to users.
+The workflow proves the backend pipeline works. The local web app proves the new event data is visible to users.
+
+If you're using Docker Compose, the app is already running at <http://localhost:8000> with hot reload — your agent's edits are picked up automatically.
+
+If you're using the native uv setup, start the FastAPI app:
 
 ```sh
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -224,7 +295,7 @@ uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 Open <http://localhost:8000>. The home page should include Restaurants and Events tabs. The Events tab should show events inserted by your local workflow run.
 
-> [!NOTE]
+> [!TIP]
 > **Result:** The local home page includes Restaurants and Events tabs, and the Events tab shows data from your local workflow run.
 
 ### 12. Push and redeploy
@@ -258,7 +329,7 @@ If any deploy fails, use the Render skills to read the logs and propose a fix
 before retrying.
 ```
 
-> [!NOTE]
+> [!TIP]
 > **Result:** Your GitHub repo contains the Events feature, and your hosted Render app redeploys from that repo.
 
 ## Troubleshooting
@@ -268,6 +339,8 @@ before retrying.
 - Source fetches fail: Check the local workflow logs. The orchestrator should continue if another source succeeds.
 - LLM extraction is skipped: Set `LLM_API_KEY` for full extraction. Without it, only non-LLM event sources produce event records.
 - The deployed cron job fails with `RENDER_API_KEY` missing: Set a real Render API key on the cron job. Don't use the workflow slug as the API key.
+- `docker compose up` exits with a port already in use: another process is bound to `5432`, `6379`, or `8000`. Stop the conflicting service or edit `compose.yaml` to map a different host port.
+- `render workflows dev` can't reach Postgres while compose is up: confirm `DATABASE_URL` in `.env.local` points at `postgresql://sfpulse:sfpulse@localhost:5432/sfpulse`, not `db:5432` (`db` only resolves inside the compose network).
 
 ## Reference
 
@@ -316,6 +389,8 @@ web/diagram/             # Vite + React sub-project for the workflow diagram
 tests/                   # pytest suite (testcontainers Postgres)
 docs/                    # architecture, workflow setup, deployment
 render.yaml              # Render Blueprint
+compose.yaml             # Local Docker Compose: Postgres + Valkey + API
+Dockerfile               # Container build for the API
 ```
 
 ### Environment variables
