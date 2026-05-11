@@ -58,6 +58,28 @@ For a deeper walkthrough of why each component exists (why a workflow service, w
 - How to use Postgres as the source of truth for discovered data
 - How to run and inspect workflow tasks locally before deploying
 
+## Workshop checklist
+
+Track your progress through the workshop. Each item links to its full instructions below.
+
+**Deploy the starter app**
+
+- [ ] [1. Create your workshop repo](#1-create-your-workshop-repo)
+- [ ] [2. Join the shared Render workspace](#2-join-the-shared-render-workspace)
+- [ ] [3. Deploy the Blueprint](#3-deploy-the-blueprint)
+- [ ] [4. Create the workflow service](#4-create-the-workflow-service)
+- [ ] [5. Wire the cron job to the workflow](#5-wire-the-cron-job-to-the-workflow)
+- [ ] [6. Verify the hosted starter app](#6-verify-the-hosted-starter-app)
+
+**Extend the pipeline**
+
+- [ ] [7. Switch to local development](#7-switch-to-local-development)
+- [ ] [8. Ask your coding agent to add events (local only)](#8-ask-your-coding-agent-to-add-events-local-only)
+- [ ] [9. Understand the new workflow tasks](#9-understand-the-new-workflow-tasks)
+- [ ] [10. Run the workflow locally](#10-run-the-workflow-locally)
+- [ ] [11. Check the local app](#11-check-the-local-app)
+- [ ] [12. Push and redeploy](#12-push-and-redeploy)
+
 ## Workshop steps
 
 ### 1. Create your workshop repo
@@ -77,7 +99,7 @@ Using one repo for every step keeps the flow consistent:
 - Your pushed changes redeploy on Render.
 
 > [!TIP]
-> **Result:** You have a public GitHub repo URL for Render services, local development, and later pushes.
+> You now have a public GitHub repo URL ready for Render services, local development, and later pushes.
 
 ### 2. Join the shared Render workspace
 
@@ -91,7 +113,7 @@ Use the shared workspace for the hosted starter app. The shared workspace gives 
 ![Switching to the AI Council workspace in the Render Dashboard sidebar](docs/images/workspace-switcher.png)
 
 > [!TIP]
-> **Result:** You can create services in the `AI Council` workspace.
+> You can now create services in the `AI Council` workspace.
 
 ### 3. Deploy the Blueprint
 
@@ -116,7 +138,7 @@ Now deploy it:
 > **The cost estimate at the bottom is informational only.** The `AI Council` workspace is the workshop's shared workspace, so you won't be charged. The workspace is torn down after the conference.
 
 > [!TIP]
-> **Result:** You have a project named `sf-pulse-<firstname-lastname>` containing the web service, cron job, database, and Key Value instance. The cron job won't run successfully until you finish step 5.
+> You now have a project named `sf-pulse-<firstname-lastname>` containing the web service, cron job, database, and Key Value instance. The cron job won't run successfully until you finish step 5.
 
 ### 4. Create the workflow service
 
@@ -145,7 +167,7 @@ Create the workflow service inside the project the Blueprint just made. This ser
     ![Workflow service Settings tab with the slug highlighted](docs/images/workflow-slug-settings.png)
 
 > [!TIP]
-> **Result:** You have a live workflow service inside your project, plus its slug ready to wire to the cron job.
+> You now have a live workflow service inside your project, plus its slug ready to wire to the cron job.
 
 ### 5. Wire the cron job to the workflow
 
@@ -158,7 +180,7 @@ The cron job needs the workflow slug to know which task to trigger.
 ![Cron service Environment tab with SF_PULSE_WORKFLOW_SLUG being added](docs/images/cron-env-var.png)
 
 > [!TIP]
-> **Result:** The cron job can now trigger `daily-refresh` on your workflow service.
+> Your cron job can now trigger `daily-refresh` on your workflow service.
 
 ### 6. Verify the hosted starter app
 
@@ -176,7 +198,7 @@ Confirm the initial app works before you start the local exercise. Verifying the
 4. Refresh the web service URL. Restaurant cards should appear on the home page.
 
 > [!TIP]
-> **Result:** The hosted app renders, `daily-refresh` runs, and restaurant data appears in the web app.
+> Your hosted starter app is running. `daily-refresh` completed successfully and restaurant data appears in the web app.
 
 ### 7. Switch to local development
 
@@ -238,7 +260,7 @@ uv run python -m bin.migrate
 You'll need PostgreSQL 16 installed locally (`brew install postgresql@16` on macOS). Valkey or Redis is optional; without it, SSE falls back to in-process.
 
 > [!TIP]
-> **Result:** You have the repo cloned, dependencies installed, the local environment configured, and database migrations applied.
+> You now have the repo cloned, dependencies installed, the local environment configured, and database migrations applied.
 
 ### 8. Ask your coding agent to add events (local only)
 
@@ -259,7 +281,7 @@ Scope:
 ```
 
 > [!TIP]
-> **Result:** Your local code includes an Events feature and new workflow tasks, but nothing has been deployed yet.
+> Your local code now includes an Events feature and new workflow tasks. Nothing has been deployed yet.
 
 ### 9. Understand the new workflow tasks
 
@@ -279,7 +301,7 @@ The local code change should extend the workflow with these tasks:
 The important pattern is fan-out and fan-in. Each source is isolated and retryable. The orchestrator tolerates failures from individual sources, then applies the candidates that succeeded.
 
 > [!TIP]
-> **Result:** You can explain which tasks fetch event data, which task orchestrates the run, and which task writes results to Postgres.
+> You can now explain which tasks fetch event data, which task orchestrates the run, and which task writes results to Postgres.
 
 ### 10. Run the workflow locally
 
@@ -304,7 +326,7 @@ Run `daily-refresh` with this input:
 Watch the logs. You should see the workflow fetch restaurant sources, fetch event sources, optionally run LLM extraction, deduplicate candidates, and call `apply-discovered-items`.
 
 > [!TIP]
-> **Result:** A local `daily-refresh` run fetches restaurants and events, deduplicates candidates, and writes records to your local Postgres database.
+> Your local `daily-refresh` run fetched restaurants and events, deduplicated candidates, and wrote records to your local Postgres database.
 
 ### 11. Check the local app
 
@@ -321,7 +343,7 @@ uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 Open <http://localhost:8000>. The home page should include Restaurants and Events tabs. The Events tab should show events inserted by your local workflow run.
 
 > [!TIP]
-> **Result:** The local home page includes Restaurants and Events tabs, and the Events tab shows data from your local workflow run.
+> Your local home page now shows Restaurants and Events tabs, with the Events tab populated by your local workflow run.
 
 ### 12. Push and redeploy
 
@@ -355,7 +377,7 @@ before retrying.
 ```
 
 > [!TIP]
-> **Result:** Your GitHub repo contains the Events feature, and your hosted Render app redeploys from that repo.
+> Your GitHub repo now contains the Events feature, and your hosted Render app has redeployed with it.
 
 ## Troubleshooting
 
