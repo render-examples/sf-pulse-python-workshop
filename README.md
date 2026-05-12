@@ -2,7 +2,9 @@
 
 This is the companion repo for the **Should Agents Be Durable?** workshop hosted at AI Council. It's a GitHub template. Click **Use this template** above to create your own copy, then follow the steps below.
 
-By the end of the workshop, you'll have shipped a durable agent: not a one-off prompt, but a repeatable Render Workflows pipeline that you ran locally, extended with new tasks, and redeployed.
+By the end of the workshop, you'll have shipped a durable agent: not a one-off prompt, but a repeatable Render Workflows pipeline. 
+
+You’ll also learn how to run the project locally, extend it with additional tasks, and redeploy your own customized version after the workshop.
 
 ## What you'll build
 
@@ -14,6 +16,8 @@ The workshop arc has two halves:
 2. **Extend the pipeline** locally with an Events feature, validate it against your local Postgres, then push and let your hosted services pick up the change.
 
 Adding an Events feature is the concrete exercise: new source tasks, a broader orchestrator, the same deduplication and persistence path. By the end, `daily-refresh` should fan out across both restaurant and event sources, and the web app should show an Events tab backed by data from your database.
+
+We will go through the first halve in this workshop, and give you resources for the second half.
 
 ### Architecture
 
@@ -46,7 +50,7 @@ flowchart LR
 
 The cron job triggers `daily-refresh` on the workflow service. The workflow fans out across source tasks (scraping and LLM extraction), deduplicates the results, upserts them into Postgres, and publishes a realtime update to Key Value. The web service reads from Postgres for page loads and subscribes to Key Value for SSE so the UI updates without a refresh.
 
-The workshop has you extend this pipeline with new source tasks for SF events.
+The workshop has you build this, and then learn how to extend this pipeline with new source tasks for SF events.
 
 For a deeper walkthrough of why each component exists (why a workflow service, why Key Value, why Postgres) and a sequence diagram of the daily-refresh flow, see [docs/architecture.md](docs/architecture.md).
 
@@ -239,6 +243,9 @@ Confirm the initial app works before you start the local exercise. Verifying the
 
 > [!TIP]
 > Your hosted starter app is running. `daily-refresh` completed successfully and restaurant data appears in the web app.
+
+
+## Extend the Workflow with Events
 
 ### 7. Switch to local development
 
