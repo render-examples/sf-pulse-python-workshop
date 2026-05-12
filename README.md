@@ -17,7 +17,7 @@ The workshop arc has two halves:
 
 Adding an Events feature is the concrete exercise: new source tasks, a broader orchestrator, the same deduplication and persistence path. By the end, `daily-refresh` should fan out across both restaurant and event sources, and the web app should show an Events tab backed by data from your database.
 
-We will go through the first halve in this workshop, and give you resources for the second half.
+We will go through the first half in this workshop, and give you resources for the second half.
 
 ### Architecture
 
@@ -244,7 +244,7 @@ Confirm the initial app works before you start the local exercise. Verifying the
 > [!TIP]
 > Your hosted starter app is running. `daily-refresh` completed successfully and restaurant data appears in the web app.
 
-
+# Going Further
 ## Extend the Workflow with Events
 
 ### 7. Switch to local development
